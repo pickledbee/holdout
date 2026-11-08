@@ -8,6 +8,10 @@
 <meta property="og:title" content="Holdout">
 <meta property="og:description" content="One trivia question a day. One wrong answer ends your run. Can you get 30 in a row?">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://pickledbee.github.io/holdout/share.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#0f1626">
 <script src="config.js"></script>
 <style>
@@ -108,6 +112,13 @@
   .sharebox { margin-top: 16px; padding: 14px; border-radius: 12px; background: var(--card2); }
   .sharebox pre { white-space: pre-wrap; font-family: inherit; font-size: 15px; margin: 0 0 4px; line-height: 1.35; }
   .sharebox .btn { margin-top: 8px; }
+  .sharegrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .sharegrid button { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: 13px; }
+  .ico { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 15px; color: #fff; }
+  .ico.fb { background: #1877f2; } .ico.ig { background: linear-gradient(45deg, #f58529, #dd2a7b, #8134af); }
+  .ico.em { background: #5b6b8c; } .ico.tx { background: #2fb34a; } .ico.xx { background: #000; } .ico.cp { background: #3a4767; }
+  #shareNote { margin-top: 8px; color: var(--accent); }
   .badge { font-size: 11px; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 7px; margin-left: 4px; white-space: nowrap; }
   .reportbox { margin-top: 12px; }
   .reportbox select, .reportbox input { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: 15px; margin-top: 6px; }
@@ -289,18 +300,53 @@
   }
   function shareBox(label) {
     if (!state.player || state.player.daysSurvived < 1) return '';
-    return '<div class="sharebox"><pre id="shareText">' + esc(shareText()) + '</pre>' +
-      '<button class="btn" id="shareBtn" onclick="doShare()">' + esc(label || 'Share my result') + '</button>' +
+    return '<div class="sharebox"><b>' + esc(label || 'Share my result') + '</b>' +
+      '<pre id="shareText">' + esc(shareText()) + '</pre>' +
+      (navigator.share ? '<button class="btn" onclick="shareTo(\'phone\')">Share...</button>' : '') +
+      '<div class="sharegrid">' +
+        '<button onclick="shareTo(\'facebook\')"><span class="ico fb">f</span>Facebook</button>' +
+        '<button onclick="shareTo(\'instagram\')"><span class="ico ig">&#9711;</span>Instagram</button>' +
+        '<button onclick="shareTo(\'email\')"><span class="ico em">&#9993;</span>Email</button>' +
+        '<button onclick="shareTo(\'text\')"><span class="ico tx">&#128172;</span>Text</button>' +
+        '<button onclick="shareTo(\'x\')"><span class="ico xx">X</span>X</button>' +
+        '<button onclick="shareTo(\'copy\')" id="copyShareBtn"><span class="ico cp">&#10697;</span>Copy</button>' +
+      '</div>' +
+      '<div id="shareNote" class="small center"></div>' +
       '<div class="small center">No answers are included, so it is spoiler-free.</div></div>';
   }
-  function doShare() {
-    var text = shareText();
-    function done() { var b = $('shareBtn'); if (b) b.textContent = 'Copied! Paste it anywhere.'; call('logShare', 'result').catch(function () {}); }
-    if (navigator.share) {
-      navigator.share({ text: text }).then(function () { call('logShare', 'result').catch(function () {}); }).catch(function () {});
-      return;
+  function shareLink() { var p = state.player; return (p && p.inviteUrl) || state.shareUrl || ''; }
+  function shareNote(msg) { var n = $('shareNote'); if (n) n.textContent = msg; }
+  function openWin(url) { var w = window.open(url, '_blank', 'noopener,width=620,height=640'); if (!w) window.location.href = url; }
+  function shareTo(where) {
+    var text = shareText(), url = shareLink();
+    var short = text.replace(url, '').trim();
+    call('logShare', where).catch(function () {});
+    if (where === 'phone') {
+      navigator.share({ text: text }).catch(function () {});
+    } else if (where === 'facebook') {
+      // Facebook only lets websites share a link; your squares are copied so you can paste them into the post.
+      copyText(text, function () {});
+      openWin('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url));
+      shareNote('Your result is copied. Paste it into the Facebook post if you want the squares to show.');
+    } else if (where === 'instagram') {
+      copyText(text, function () {});
+      if (navigator.share) {
+        navigator.share({ text: text }).catch(function () {});
+        shareNote('Pick Instagram in the share menu. Your result is also copied.');
+      } else {
+        shareNote('Copied! Instagram doesn\'t let websites post for you, so paste it into a story, post, or message in the Instagram app.');
+      }
+    } else if (where === 'email') {
+      window.location.href = 'mailto:?subject=' + encodeURIComponent('Can you outlast me on Holdout?') +
+        '&body=' + encodeURIComponent(text);
+    } else if (where === 'text') {
+      var sep = /iPhone|iPad|iPod|Mac/i.test(navigator.userAgent) ? '&' : '?';
+      window.location.href = 'sms:' + sep + 'body=' + encodeURIComponent(text);
+    } else if (where === 'x') {
+      openWin('https://twitter.com/intent/tweet?text=' + encodeURIComponent(short) + '&url=' + encodeURIComponent(url));
+    } else {
+      copyText(text, function () { var b = $('copyShareBtn'); if (b) b.innerHTML = '<span class="ico cp">&#10003;</span>Copied!'; shareNote('Copied! Paste it anywhere.'); });
     }
-    copyText(text, done);
   }
   function copyText(text, done) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
