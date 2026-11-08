@@ -9,14 +9,15 @@
 const SETTING_FIELDS = [
   { key: 'Game Name', type: 'text', help: 'Shown at the top of the game page.' },
   { key: 'Tagline', type: 'text', help: 'Shown under the game name.' },
-  { key: 'Run Length (days)', type: 'number', help: 'Days a player must survive to make the Hall of Fame. You need a question for every day.' },
-  { key: 'Bonus Questions Per Day', type: 'number', help: 'Most bonus questions a player can use in one day.' },
+  { key: 'Run Length (days)', type: 'number', help: 'How many questions in a row a player must get right to make the Hall of Fame.' },
+  { key: 'Pause Days Per Run', type: 'number', help: 'Days a player can miss in one run. Missing one more than this ends the run.' },
+  { key: 'Bonus Questions Per Day', type: 'number', help: 'Most comebacks (bonus questions) a player can use in one day.' },
   { key: 'Show Amazon Picks', type: 'yesno', help: 'Show your Amazon product picks in the game.' },
   { key: 'Amazon Associate Tag', type: 'text', help: 'Your Amazon affiliate tag. Added to every Amazon link automatically.' },
   { key: 'Email Cheat Alerts', type: 'yesno', help: 'Email you each new cheat alert.' },
   { key: 'Cheat Alert Email', type: 'text', help: 'Where cheat alerts are emailed.' },
   { key: 'Game Website', type: 'text', help: 'The address players use, like https://pickledbee.github.io/holdout/ (invite links use it).' },
-  { key: 'Time Zone', type: 'text', help: 'Used for dates and for when the daily bonus limit resets. Example: America/Chicago' }
+  { key: 'Time Zone', type: 'text', help: 'Everyone\'s next question unlocks at midnight in this time zone. Example: America/Chicago' }
 ];
 
 /* ---------------- open the panel ---------------- */
@@ -44,18 +45,13 @@ function panelGetData() {
     const c = r.slice();
     checkMissed_(c, now, s);
     const days = Number(c[P.DAYS]) || 0;
-    const pd = personalDay_(c, now);
     const status = String(c[P.STATUS]);
-    let nextAt = '';
-    if (status === 'Alive') {
-      nextAt = days >= pd ? 'Next question unlocks ' + fmt(new Date(startMs_(c) + pd * DAY_MS))
-        : 'Must answer by ' + fmt(new Date(startMs_(c) + pd * DAY_MS));
-    }
+    const answeredToday = status === 'Alive' && normDate_(c[P.LASTDATE], s) === today;
     return {
       id: String(c[P.ID]),
       name: String(c[P.NAME]),
       status: status,
-      day: status === 'Alive' ? Math.min(pd, s.length) : '',
+      day: status === 'Alive' ? Math.min(days + 1, s.length) : '',
       survived: days,
       best: Math.max(Number(c[P.BEST]) || 0, days),
       attempt: Number(c[P.ATTEMPT]) || 1,
@@ -70,31 +66,33 @@ function panelGetData() {
       joinedToday: c[P.JOINED] instanceof Date && Utilities.formatDate(c[P.JOINED], s.tz, 'yyyy-MM-dd') === today,
       devices: String(c[P.DEVICES] || '').split(',').filter(Boolean).length,
       fast: Number(c[P.FAST]) || 0,
-      nextAt: nextAt
+      pausesLeft: Math.max(0, s.pauseLimit - (Number(c[P.PAUSES]) || 0)),
+      comebacks: Number(c[P.COMEBACKS]) || 0,
+      lastQ: String(c[P.LASTQ] || ''),
+      nextAt: status === 'Alive' ? (answeredToday ? 'Answered today. Next question unlocks at midnight.' : 'Has a question waiting (due by midnight).') : ''
     };
   });
 
-  // ---- answers today ----
+  // ---- answers: today's numbers and the player funnel ----
   const ansSh = ss.getSheetByName(TAB.ANSWERS);
-  let answersToday = 0, correctToday = 0;
+  let answersToday = 0, correctToday = 0, guestTries = 0, guestToday = 0;
+  const daysByPlayer = {};
   if (ansSh && ansSh.getLastRow() > 1) {
     ansSh.getRange(2, 1, ansSh.getLastRow() - 1, ANSWER_HEADERS.length).getValues().forEach(r => {
-      if (r[0] instanceof Date && Utilities.formatDate(r[0], s.tz, 'yyyy-MM-dd') === today) {
-        answersToday++;
-        if (r[7] === 'Yes') correctToday++;
-      }
+      const d = r[0] instanceof Date ? Utilities.formatDate(r[0], s.tz, 'yyyy-MM-dd') : '';
+      if (r[1] === 'GUEST') { guestTries++; if (d === today) guestToday++; return; }
+      if (d === today) { answersToday++; if (r[7] === 'Yes') correctToday++; }
+      if (r[1]) (daysByPlayer[r[1]] = daysByPlayer[r[1]] || {})[d] = true;
     });
   }
+  const playDays = Object.keys(daysByPlayer).map(k => Object.keys(daysByPlayer[k]).length);
 
   // ---- questions ----
-  const qSh = ss.getSheetByName(TAB.QUESTIONS);
-  const questions = (qSh && qSh.getLastRow() > 1)
-    ? qSh.getRange(2, 1, qSh.getLastRow() - 1, QUESTION_HEADERS.length).getValues()
-      .map((r, i) => ({ row: i + 2, day: String(r[0]).trim(), difficulty: String(r[1]), question: String(r[2]),
-        A: String(r[3]), B: String(r[4]), C: String(r[5]), D: String(r[6]),
-        correct: String(r[7]).trim().toUpperCase(), funFact: String(r[8]) }))
-      .filter(q => q.day || q.question)
-    : [];
+  const questions = allQuestionsForPanel_();
+  const levelCounts = {};
+  ['Easy', 'Medium', 'Hard', 'Very Hard'].forEach(t => {
+    levelCounts[t] = questions.filter(q => q.active && q.difficulty === t).length;
+  });
 
   // ---- Amazon picks ----
   const adSh = ss.getSheetByName(TAB.ADS);
@@ -136,11 +134,23 @@ function panelGetData() {
       joinedToday: players.filter(p => p.joinedToday).length,
       answersToday: answersToday,
       correctToday: correctToday,
+      guestToday: guestToday,
       newAlerts: alerts.filter(a => !a.reviewed).length,
       bonusesWaiting: players.reduce((t, p) => t + p.bonus, 0),
       friendsInvited: players.reduce((t, p) => t + p.friends, 0),
       hallOfFame: Math.max(0, (ss.getSheetByName(TAB.HALL).getLastRow() || 1) - 1)
     },
+    funnel: {
+      guestTries: guestTries,
+      signups: players.length,
+      answered1: playDays.filter(n => n >= 1).length,
+      days2: playDays.filter(n => n >= 2).length,
+      days7: playDays.filter(n => n >= 7).length,
+      restarts: players.reduce((t, p) => t + Math.max(0, p.attempt - 1), 0),
+      comebacks: players.reduce((t, p) => t + p.comebacks, 0),
+      shares: Number(PropertiesService.getScriptProperties().getProperty('SHARES_TOTAL')) || 0
+    },
+    levelCounts: levelCounts,
     players: players,
     questions: questions,
     problems: findProblems_(questions, ads, s),
@@ -150,26 +160,40 @@ function panelGetData() {
   };
 }
 
+function allQuestionsForPanel_() {
+  const qSh = ss_().getSheetByName(TAB.QUESTIONS);
+  if (!qSh || qSh.getLastRow() < 2) return [];
+  return qSh.getRange(2, 1, qSh.getLastRow() - 1, QUESTION_HEADERS.length).getValues()
+    .map((r, i) => ({ row: i + 2, id: String(r[0]).trim(), difficulty: normDifficulty_(r[1]), question: String(r[2]),
+      A: String(r[3]), B: String(r[4]), C: String(r[5]), D: String(r[6]),
+      correct: String(r[7]).trim().toUpperCase(), funFact: String(r[8]),
+      active: String(r[9] === '' ? 'Yes' : r[9]).trim().toLowerCase().indexOf('y') === 0 }))
+    .filter(q => q.id || q.question);
+}
+
 function findProblems_(questions, ads, s) {
   const problems = [];
-  const byDay = {};
-  questions.forEach(q => { (byDay[q.day] = byDay[q.day] || []).push(q); });
-  for (let d = 1; d <= s.length; d++) {
-    if (!byDay[String(d)]) problems.push('Day ' + d + ' has no question. Players who reach Day ' + d + ' will be stuck.');
-  }
-  Object.keys(byDay).forEach(d => {
-    if (d && byDay[d].length > 1) problems.push('Day ' + d + ' has ' + byDay[d].length + ' questions. Only the first one (row ' + byDay[d][0].row + ') is used.');
+  const ids = {};
+  questions.forEach(q => { (ids[q.id] = ids[q.id] || []).push(q); });
+  Object.keys(ids).forEach(id => {
+    if (!id) problems.push('A question on row ' + ids[id][0].row + ' has no ID, so it will never be used.');
+    else if (ids[id].length > 1) problems.push('ID ' + id + ' is used ' + ids[id].length + ' times. Every question needs its own ID.');
+  });
+  ['Easy', 'Medium', 'Hard', 'Very Hard'].forEach(t => {
+    const n = questions.filter(q => q.active && q.difficulty === t).length;
+    if (n === 0) problems.push('No active ' + t + ' questions. Players who reach that level will get questions from other levels.');
+    else if (n < 20) problems.push('Only ' + n + ' active ' + t + ' questions. Aim for at least 20 so repeat players see new ones.');
   });
   questions.forEach(q => {
-    const label = q.day ? 'Day ' + q.day : 'Row ' + q.row;
+    if (!q.active) return;
+    const label = q.id || 'Row ' + q.row;
     if (!q.question.trim()) problems.push(label + ' has no question text.');
-    if (['A', 'B', 'C', 'D'].indexOf(q.correct) < 0) problems.push(label + ': Correct must be A, B, C, or D.');
+    if (['A', 'B', 'C', 'D'].indexOf(q.correct) < 0) problems.push(label + ': Correct must be A, B, C, or D, so this question is skipped.');
     ['A', 'B', 'C', 'D'].forEach(L => { if (!q[L].trim()) problems.push(label + ': answer ' + L + ' is blank.'); });
   });
-  const backups = questions.filter(q => /^backup/i.test(q.day)).length;
-  if (backups < 3) problems.push('Only ' + backups + ' Backup questions. Keep at least 3 for Second Chance questions.');
   ads.forEach(a => {
     if (a.active && !a.finalUrl) problems.push('Amazon pick "' + (a.product || a.headline) + '" has a link that is not a working Amazon link, so it will not show.');
+    if (a.active && /^Q\d+$/i.test(a.showOn) && !ids[a.showOn.toUpperCase()]) problems.push('Amazon pick "' + a.product + '" is set to show on ' + a.showOn + ', but there is no question with that ID.');
   });
   return problems;
 }
@@ -179,7 +203,6 @@ function findProblems_(questions, ads, s) {
 function panelPlayerAction(id, action, value) {
   requireOwner_();
   const s = settings_();
-  const now = Date.now();
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -187,7 +210,7 @@ function panelPlayerAction(id, action, value) {
     const i = data.rows.findIndex(r => r[P.ID] === id);
     if (i < 0) throw new Error('That player was not found. Click Refresh.');
     const row = data.rows[i];
-    checkMissed_(row, now, s);
+    checkMissed_(row, Date.now(), s);
     const name = String(row[P.NAME]);
 
     switch (action) {
@@ -197,42 +220,22 @@ function panelPlayerAction(id, action, value) {
       case 'bonusRemove':
         row[P.BONUS] = Math.max(0, (Number(row[P.BONUS]) || 0) - 1);
         break;
-      case 'revive': {
+      case 'pauseAdd':
+        row[P.PAUSES] = (Number(row[P.PAUSES]) || 0) - 1;
+        break;
+      case 'revive':
         if (row[P.STATUS] !== 'Out') throw new Error(name + ' is not out.');
-        const days = Number(row[P.DAYS]) || 0;
-        const outDay = Number(row[P.OUTDAY]) || (days + 1);
-        const wasWrong = row[P.REASON] === 'Wrong answer';
-        row[P.STATUS] = 'Alive';
-        row[P.DAYS] = outDay - 1;
-        row[P.START] = new Date(now - (outDay - 1) * DAY_MS);
-        row[P.OUTDAY] = '';
-        row[P.REASON] = '';
-        row[P.OVERRIDE] = wasWrong ? pickSecondChance_(String(row[P.LASTQ] || '')) : '';
+        comeBack_(row, s);
         break;
-      }
-      case 'skipWait': {
-        if (row[P.STATUS] !== 'Alive') throw new Error(name + ' is not in a run.');
-        const pd = personalDay_(row, now);
-        if ((Number(row[P.DAYS]) || 0) < pd) throw new Error(name + ' already has a question waiting.');
-        row[P.START] = new Date(startMs_(row) - DAY_MS);
-        break;
-      }
       case 'knockout':
         if (row[P.STATUS] !== 'Alive') throw new Error(name + ' is not in a run.');
         row[P.STATUS] = 'Out';
-        row[P.OUTDAY] = Math.min(personalDay_(row, now), s.length);
+        row[P.OUTDAY] = Math.min((Number(row[P.DAYS]) || 0) + 1, s.length);
         row[P.REASON] = 'Removed by admin';
-        row[P.OVERRIDE] = '';
+        row[P.CURQ] = '';
         break;
       case 'newRun':
-        row[P.BEST] = Math.max(Number(row[P.BEST]) || 0, Number(row[P.DAYS]) || 0);
-        row[P.STATUS] = 'Alive';
-        row[P.START] = new Date(now);
-        row[P.ATTEMPT] = (Number(row[P.ATTEMPT]) || 1) + 1;
-        row[P.DAYS] = 0;
-        row[P.OUTDAY] = '';
-        row[P.REASON] = '';
-        row[P.OVERRIDE] = '';
+        startRun_(row, s, true);
         break;
       case 'resetPin': {
         const pin = String(value || '').trim();
@@ -269,17 +272,30 @@ function panelPlayerAction(id, action, value) {
 function panelSaveQuestion(q) {
   requireOwner_();
   const correct = String(q.correct || '').trim().toUpperCase();
-  if (!String(q.day || '').trim()) throw new Error('Day is required (a number like 5, or Backup 7, or Retired).');
   if (!String(q.question || '').trim()) throw new Error('Question text is required.');
   if (['A', 'B', 'C', 'D'].indexOf(correct) < 0) throw new Error('Correct must be A, B, C, or D.');
   ['A', 'B', 'C', 'D'].forEach(L => { if (!String(q[L] || '').trim()) throw new Error('Answer ' + L + ' is blank.'); });
-  const values = [[String(q.day).trim(), String(q.difficulty || '').trim(), String(q.question).trim(),
-    String(q.A).trim(), String(q.B).trim(), String(q.C).trim(), String(q.D).trim(), correct, String(q.funFact || '').trim()]];
   const sh = ss_().getSheetByName(TAB.QUESTIONS);
+  const existing = allQuestionsForPanel_();
+  let id = String(q.id || '').trim().toUpperCase();
+  if (!id) {
+    const max = existing.reduce((m, x) => Math.max(m, Number((x.id.match(/^Q(\d+)$/) || [0, 0])[1])), 0);
+    id = 'Q' + ('00' + (max + 1)).slice(-3);
+  }
+  if (!/^Q\d+$/.test(id)) throw new Error('IDs look like Q157.');
+  if (existing.some(x => x.id === id && x.row !== Number(q.row))) throw new Error('ID ' + id + ' is already used by another question.');
+  const values = [[id, normDifficulty_(q.difficulty), String(q.question).trim(), String(q.A).trim(), String(q.B).trim(),
+    String(q.C).trim(), String(q.D).trim(), correct, String(q.funFact || '').trim(), q.active === false ? 'No' : 'Yes']];
   const row = Number(q.row) || sh.getLastRow() + 1;
   sh.getRange(row, 1).setNumberFormat('@');
   sh.getRange(row, 1, 1, QUESTION_HEADERS.length).setValues(values);
-  return q.row ? 'Question saved.' : 'Question added.';
+  return (q.row ? 'Question ' : 'Question added as ') + id + (q.row ? ' saved.' : '.');
+}
+
+function panelToggleQuestion(row, active) {
+  requireOwner_();
+  ss_().getSheetByName(TAB.QUESTIONS).getRange(Number(row), 10).setValue(active ? 'Yes' : 'No');
+  return active ? 'Question turned on.' : 'Question turned off. Players will not get it anymore.';
 }
 
 function panelDeleteQuestion(row) {
@@ -290,13 +306,18 @@ function panelDeleteQuestion(row) {
   return 'Question deleted.';
 }
 
+function panelReviveQuestion(id) {
+  requireOwner_();
+  return reviveByQuestion_(id);
+}
+
 /* ---------------- Amazon picks ---------------- */
 
 function panelSaveAd(a) {
   requireOwner_();
   const s = settings_();
   const showOn = String(a.showOn || '').trim();
-  if (!showOn) throw new Error('Show On is required: a Day number, Knockout, Waiting, or Champion.');
+  if (!showOn) throw new Error('Show On is required: a question ID (like Q012), Knockout, Waiting, or Champion.');
   if (!String(a.product || '').trim()) throw new Error('Product name is required.');
   let url = String(a.url || '').trim();
   const words = String(a.searchWords || '').trim();
@@ -376,35 +397,6 @@ function panelSaveSettings(values) {
 }
 
 /* ---------------- tools ---------------- */
-
-function panelReviveDay(day) {
-  requireOwner_();
-  const n = parseInt(day, 10);
-  if (!n || n < 1) throw new Error('Type a day number, like 5.');
-  const now = Date.now();
-  const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
-  let count = 0;
-  try {
-    const data = readPlayers_();
-    data.rows.forEach(r => {
-      if (r[P.STATUS] === 'Out' && Number(r[P.OUTDAY]) === n && r[P.REASON] === 'Wrong answer') {
-        r[P.STATUS] = 'Alive';
-        r[P.DAYS] = n;
-        r[P.BEST] = Math.max(Number(r[P.BEST]) || 0, n);
-        r[P.START] = new Date(now - n * DAY_MS);
-        r[P.OUTDAY] = '';
-        r[P.REASON] = '';
-        r[P.OVERRIDE] = '';
-        count++;
-      }
-    });
-    if (count) data.sh.getRange(2, 1, data.rows.length, PLAYER_HEADERS.length).setValues(data.rows);
-  } finally {
-    lock.releaseLock();
-  }
-  return count + ' player(s) brought back from Day ' + n + '.';
-}
 
 function panelGiveEveryoneBonus() {
   requireOwner_();

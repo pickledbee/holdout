@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Holdout</title>
-<meta name="description" content="One trivia question a day. One wrong answer and you are out. Can you survive 30 days?">
+<meta name="description" content="One trivia question a day. One wrong answer ends your run. Can you get 30 in a row?">
 <meta property="og:title" content="Holdout">
-<meta property="og:description" content="One trivia question a day. One wrong answer and you are out. Can you survive 30 days?">
+<meta property="og:description" content="One trivia question a day. One wrong answer ends your run. Can you get 30 in a row?">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#0f1626">
 <script src="config.js"></script>
@@ -105,6 +105,10 @@
     border: 1px solid var(--accent); color: var(--accent); font-weight: 700; text-decoration: none; }
   .ad .addisc { font-size: 12px; color: var(--muted); margin-top: 8px; }
   .footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 24px; }
+  .sharebox { margin-top: 16px; padding: 14px; border-radius: 12px; background: var(--card2); }
+  .sharebox pre { white-space: pre-wrap; font-family: inherit; font-size: 15px; margin: 0 0 4px; line-height: 1.35; }
+  .sharebox .btn { margin-top: 8px; }
+  .badge { font-size: 11px; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 7px; margin-left: 4px; white-space: nowrap; }
   .progress { height: 8px; background: var(--bg); border-radius: 999px; overflow: hidden; margin: 10px 0 4px; }
   .progress div { height: 100%; background: var(--accent); }
 </style>
@@ -137,20 +141,19 @@
   <div class="card">
     <h2>How to play</h2>
     <ul class="small">
-      <li>Your game starts the moment you join. Your Day 1 question is waiting right away.</li>
-      <li>A new question unlocks every 24 hours from the time you joined.</li>
-      <li>You have 24 hours to answer each one.</li>
-      <li>One wrong answer, or a skipped day, and you are out.</li>
-      <li>Survive every day to make the Hall of Fame.</li>
-      <li>Invite friends with your personal link. Every friend who joins earns you a bonus question (up to 2 a day).</li>
-      <li>Still in? A bonus lets you answer your next question right now instead of waiting.</li>
-      <li>Knocked out? A bonus puts you back in right where you left off.</li>
+      <li>Answer one question a day. Your first one is ready right now.</li>
+      <li>Everyone's next question unlocks at midnight Central Time.</li>
+      <li>Questions get harder as you go. Get 30 in a row right to make the Hall of Fame.</li>
+      <li>One wrong answer ends your run.</li>
+      <li>Busy day? You get 2 pause days per run. Missing a day uses one, and your question waits for you.</li>
+      <li>Knocked out? Start a new run for free, or invite a friend: when they join with your link, you can continue from where you left off.</li>
+      <li>Each answer is revealed after the next midnight, so no spoilers.</li>
     </ul>
     <details>
       <summary>Privacy and rules</summary>
       <p>Players must be 13 or older.</p>
       <p>We only store the display name you choose, a scrambled version of your PIN, when you joined, your answers and how long they took, and a random code for your browser that helps us spot cheating. We do not ask for your email or real name, and we never sell or share your information.</p>
-      <p>Playing more than one account, or making fake accounts to earn bonus questions, gets you removed.</p>
+      <p>Playing more than one account, or making fake accounts to earn comebacks, gets you removed.</p>
       <p>Your display name appears on the public leaderboard, so do not use your full real name.</p>
       <p>There are no prizes. Bragging rights only.</p>
       <p>To have your player deleted, contact the game organizer.</p>
@@ -168,6 +171,7 @@
   var timer = null;
   var authMode = 'join';
   var lastBoard = null;
+  var guestQ = null;
 
   // ---------- small helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -181,6 +185,8 @@
   function getToken() { return read('holdout_token'); }
   function setToken(t) { store('holdout_token', t); }
   function clearToken() { store('holdout_token', ''); }
+  function getGuest() { try { return JSON.parse(read('holdout_guest') || 'null'); } catch (e) { return null; } }
+  function setGuest(g) { store('holdout_guest', g ? JSON.stringify(g) : ''); }
 
   // Invite code from the link they arrived on (kept so it still counts if they join later)
   (function () {
@@ -247,47 +253,75 @@
     var left = seconds;
     timer = setInterval(function () {
       left--;
-      var el = $('countdown');
-      if (el) el.textContent = fmtTime(left);
+      document.querySelectorAll('.cd').forEach(function (el) { el.textContent = fmtTime(left); });
       if (left <= 0) { clearInterval(timer); setTimeout(loadAll, 3000); }
     }, 1000);
   }
-
   function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
 
+  // ---------- sharing ----------
+  function squares(n, red) {
+    var out = '', count = 0;
+    for (var i = 0; i < n; i++) { out += '🟩'; count++; if (count % 10 === 0) out += '\n'; }
+    if (red) out += '🟥';
+    return out.replace(/\n$/, '');
+  }
+  function shareText() {
+    var p = state.player, L = state.length, url = p.inviteUrl || state.shareUrl || '';
+    var name = (state.gameName || 'Holdout').toUpperCase();
+    var cb = p.comebacks ? '\n(' + plural(p.comebacks, 'comeback') + ')' : '';
+    if (p.status === 'Champion') {
+      return name + '\nI got all ' + L + ' questions in a row right!' + cb + '\n' + squares(p.daysSurvived) + '\nCan you?\n' + url;
+    }
+    if (p.status === 'Out') {
+      return name + '\nOut on question ' + p.outOnDay + '. Best run: ' + p.best + ' of ' + L + '.\n' +
+        squares(p.daysSurvived, p.outReason === 'Wrong answer') + '\nThink you can beat me?\n' + url;
+    }
+    return name + '\nStill standing: ' + p.daysSurvived + ' of ' + L + cb + '\n' + squares(p.daysSurvived) +
+      '\nOne wrong answer ends the run.\nCan you outlast me?\n' + url;
+  }
+  function shareBox(label) {
+    if (!state.player || state.player.daysSurvived < 1) return '';
+    return '<div class="sharebox"><pre id="shareText">' + esc(shareText()) + '</pre>' +
+      '<button class="btn" id="shareBtn" onclick="doShare()">' + esc(label || 'Share my result') + '</button>' +
+      '<div class="small center">No answers are included, so it is spoiler-free.</div></div>';
+  }
+  function doShare() {
+    var text = shareText();
+    function done() { var b = $('shareBtn'); if (b) b.textContent = 'Copied! Paste it anywhere.'; call('logShare', 'result').catch(function () {}); }
+    if (navigator.share) {
+      navigator.share({ text: text }).then(function () { call('logShare', 'result').catch(function () {}); }).catch(function () {});
+      return;
+    }
+    copyText(text, done);
+  }
+  function copyText(text, done) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallbackCopy(text, done); });
+    } else fallbackCopy(text, done);
+  }
+  function fallbackCopy(text, done) {
+    var t = document.createElement('textarea');
+    t.value = text; document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); done(); } catch (e) { prompt('Copy this:', text); }
+    document.body.removeChild(t);
+  }
+
   // ---------- invite box ----------
-  function inviteBox(p, headline) {
+  function inviteBox(p, headline, sub) {
     if (!p.inviteUrl) return '';
     return '<div class="invitebox">' +
-      '<b>' + headline + '</b>' +
-      '<div class="small">Every friend who joins with your link earns you 1 bonus question. You can use up to ' +
-        state.bonusLimit + ' a day.</div>' +
+      '<b>' + esc(headline) + '</b>' +
+      '<div class="small">' + esc(sub) + '</div>' +
       '<div class="linkrow"><input type="text" id="inviteLink" readonly value="' + esc(p.inviteUrl) + '" onclick="this.select()">' +
       '<button id="copyBtn" onclick="copyInvite()">Copy</button></div>' +
-      '<div class="bonuscount">Bonus questions: <b>' + p.bonus + '</b> &middot; Used today: ' + p.bonusUsedToday + ' of ' + state.bonusLimit +
-      ' &middot; Friends invited: ' + p.friendsInvited + '</div>' +
+      '<div class="bonuscount">Comeback bonuses saved: <b>' + p.bonus + '</b> &middot; Friends invited: ' + p.friendsInvited + '</div>' +
       '</div>';
   }
   function copyInvite() {
     var input = $('inviteLink');
     if (!input) return;
-    var text = input.value;
-    function done() { var b = $('copyBtn'); if (b) b.textContent = 'Copied!'; }
-    if (navigator.share) {
-      navigator.share({ title: state.gameName,
-        text: 'Play ' + state.gameName + ' with me: one trivia question a day, one wrong answer and you are out.',
-        url: text }).then(done).catch(function () { fallbackCopy(input, done); });
-      return;
-    }
-    fallbackCopy(input, done);
-  }
-  function fallbackCopy(input, done) {
-    var text = input.value;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(done).catch(function () { input.select(); try { document.execCommand('copy'); done(); } catch (e) {} });
-    } else {
-      input.select(); try { document.execCommand('copy'); done(); } catch (e) {}
-    }
+    copyText(input.value, function () { var b = $('copyBtn'); if (b) b.textContent = 'Copied!'; });
   }
 
   // ---------- Amazon picks ----------
@@ -298,7 +332,7 @@
       '<div class="adhead">' + esc(ad.headline) + '</div>' +
       '<div class="adprod">' + esc(ad.product) + '</div>' +
       '<a class="adbtn" href="' + esc(ad.url) + '" target="_blank" rel="sponsored nofollow noopener">See it on Amazon</a>' +
-      '<div class="addisc">' + esc(state.disclosure || 'As an Amazon Associate I earn from qualifying purchases.') + '</div>' +
+      '<div class="addisc">' + esc((state && state.disclosure) || 'As an Amazon Associate I earn from qualifying purchases.') + '</div>' +
       '</div>';
   }
 
@@ -327,11 +361,18 @@
     $('tagline').textContent = state.tagline;
     var p = state.player;
     var mine = '';
-    if (p && p.status === 'Alive') mine = '<span class="pill">You: Day <b>' + p.day + '</b> of ' + state.length + '</span>';
+    if (p && p.status === 'Alive') mine = '<span class="pill">You: <b>' + p.daysSurvived + '</b> of ' + state.length + ' in a row</span>';
     $('pills').innerHTML = mine +
-      '<span class="pill">Survive <b>' + state.length + '</b> days</span>' +
+      '<span class="pill">New question daily at ' + esc(resetTime()) + '</span>' +
       '<span class="pill" id="alivePill" style="display:none"></span>';
     if (lastBoard) renderBoard(lastBoard);
+  }
+
+  // The daily reset shown in the player's own time zone
+  function resetTime() {
+    try {
+      return new Date(Date.now() + state.countdown * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    } catch (e) { return 'midnight'; }
   }
 
   // ---------- main card ----------
@@ -339,70 +380,64 @@
     var main = $('main');
     var p = state.player;
     main.className = 'card';
-
-    if (!p) { renderAuth(); return; }
+    if (!p) { renderVisitor(); return; }
 
     var html = '<div class="small">Playing as <b>' + esc(p.name) + '</b>' +
       (p.attempt > 1 ? ' &middot; Run #' + p.attempt : '') +
-      ' &middot; Best run: ' + plural(p.best, 'day') + ' &nbsp; ' +
+      ' &middot; Best: ' + p.best + ' of ' + state.length + ' &nbsp; ' +
       '<button class="link" onclick="logout()">Log out</button></div>';
 
     if (p.status === 'Alive') {
       var pct = Math.round(100 * p.daysSurvived / state.length);
       html += '<div class="progress"><div style="width:' + pct + '%"></div></div>' +
-        '<div class="small">' + p.daysSurvived + ' of ' + state.length + ' days survived</div><br>';
+        '<div class="small">' + p.daysSurvived + ' of ' + state.length + ' correct in a row &middot; Pause days left: <b>' + p.pausesLeft + '</b>' +
+        (p.comebacks ? ' &middot; ' + plural(p.comebacks, 'comeback') : '') + '</div><br>';
 
       if (state.question) {
         var q = state.question;
-        html += '<div class="timeleft">Time left to answer: <b id="countdown">' + fmtTime(state.countdown) + '</b></div>' +
-          '<div class="small">Day ' + q.day + ' of ' + state.length + ' &middot; ' +
+        html += '<div class="timeleft">Answer by midnight: <b class="cd">' + fmtTime(state.countdown) + '</b></div>' +
+          '<div class="small">Question ' + q.number + ' of ' + state.length + ' &middot; ' +
             (q.secondChance ? 'Second chance question' : esc(q.difficulty)) + '</div>' +
-          '<div class="qtext">' + esc(q.text) + '</div>';
-        ['A', 'B', 'C', 'D'].forEach(function (L) {
-          html += '<button class="choice" id="ch' + L + '" onclick="pick(\'' + L + '\')">' +
-            '<span class="letter">' + L + '</span><span>' + esc(q.choices[L]) + '</span></button>';
-        });
-        html += '<button class="btn" id="lockBtn" disabled onclick="lockIn()">Pick an answer</button>' +
-          '<div class="warn">One wrong answer and you are out. Choose carefully.</div>';
+          '<div class="qtext">' + esc(q.text) + '</div>' + choicesHtml(q.choices) +
+          '<button class="btn" id="lockBtn" disabled onclick="lockIn()">Pick an answer</button>' +
+          '<div class="warn">One wrong answer ends your run. Choose carefully.</div>' +
+          '<p class="small">Can\'t play today? Skipping a day uses a pause day, and your question waits for you.</p>';
       } else if (state.questionMissing) {
-        html += '<div class="status">Your next question is on its way</div>' +
-          '<p>Check back a little later.</p>';
+        html += '<div class="status">Your next question is on its way</div><p>Check back a little later.</p>';
       } else {
-        html += '<div class="status good">You survived Day ' + p.daysSurvived + '!</div>' +
-          '<p>Your next question unlocks in:</p>' +
-          '<div class="countdown" id="countdown">' + fmtTime(state.countdown) + '</div>' +
-          '<p class="small">Once it unlocks, you have 24 hours to answer. Skipping a day counts as a wrong answer.</p>';
-        if (p.canUseBonus) {
-          html += '<button class="btn" id="bonusBtn" onclick="doBonus()">Use a bonus question: play Day ' +
-            (p.daysSurvived + 1) + ' now</button>' +
-            '<p class="small">It opens right away and must be answered before the countdown above runs out.</p>';
-        }
-        html += inviteBox(p, 'Do not want to wait? Invite a friend.');
+        html += '<div class="status good">You\'re still standing!</div>' +
+          '<p>Your next question unlocks at midnight, in:</p>' +
+          '<div class="countdown cd">' + fmtTime(state.countdown) + '</div>' +
+          calendarLink() + shareBox('Challenge my friends') +
+          inviteBox(p, 'Save up a comeback', 'If you ever get knocked out, a friend joining with your link lets you continue where you left off instead of starting over.');
       }
 
     } else if (p.status === 'Champion') {
-      html += '<div class="status good">You survived all ' + state.length + ' days!</div>' +
+      html += '<div class="status good">You got all ' + state.length + ' in a row!</div>' +
         '<p>You are in the Hall of Fame. Want to see if you can do it again?</p>' +
-        '<button class="btn" id="runBtn" onclick="doNewRun()">Start a new run now</button>' +
-        inviteBox(p, 'Bring your friends into the game.');
+        shareBox('Share my win') +
+        '<button class="btn" id="runBtn" onclick="doNewRun()">Start a new run</button>' +
+        inviteBox(p, 'Bring your friends in', 'Each friend who joins with your link saves you a comeback for a future run.');
 
     } else { // Out
-      var why = p.outReason === 'Missed a day'
-        ? 'You let Day ' + p.outOnDay + ' go by without answering.'
-        : 'Your answer on Day ' + p.outOnDay + ' was wrong.';
-      html += '<div class="status bad">You are out</div>' +
-        '<p>' + esc(why) + ' You survived ' + plural(p.daysSurvived, 'day') + '.</p>';
-      if (p.canUseBonus) {
-        html += '<button class="btn" id="bonusBtn" onclick="doBonus()">Use a bonus question: get back in at Day ' +
-          p.outOnDay + '</button>' +
-          '<p class="small">You keep your ' + plural(p.daysSurvived, 'day') + ' and get a new question for Day ' + p.outOnDay +
-          ' with a fresh 24 hours to answer it.</p>';
-      } else if (p.bonus > 0) {
-        html += '<p>You have used your ' + state.bonusLimit + ' bonus questions for today. Come back tomorrow to use another one.</p>';
-      } else {
-        html += '<p><b>Get back in right where you left off:</b> invite a friend. As soon as they join with your link, you get another question.</p>';
+      var why = /^Missed/.test(p.outReason) ? 'You ran out of pause days.'
+        : p.outReason === 'Removed by admin' ? 'This run was ended by the game organizer.'
+        : 'Your answer on question ' + p.outOnDay + ' was wrong.';
+      html += '<div class="status bad">Your run ended on question ' + p.outOnDay + '</div>' +
+        '<p>' + esc(why) + ' Your best is ' + p.best + ' of ' + state.length + '.</p>';
+      if (p.canRestart) {
+        html += '<button class="btn" id="runBtn" onclick="doNewRun()">Start a new run' +
+          (p.restartIsInstant ? ' now' : ' (first question at midnight)') + '</button>';
       }
-      html += inviteBox(p, 'Your invite link');
+      if (p.canComeBack) {
+        html += '<button class="btn ghost" id="bonusBtn" onclick="doBonus()">Use a comeback: continue from question ' + p.outOnDay + '</button>' +
+          '<p class="small">You keep your ' + plural(p.daysSurvived, 'correct answer') + ' and get a different question for question ' + p.outOnDay + '.</p>';
+      } else if (p.bonus > 0) {
+        html += '<p class="small">You have used your ' + state.bonusLimit + ' comebacks for today. You can use one tomorrow, or start a new run now.</p>';
+      } else if (p.outReason !== 'Removed by admin') {
+        html += '<p class="small">Want to keep your ' + plural(p.daysSurvived, 'correct answer') + ' instead of starting over? When a friend joins with your link, you can continue from question ' + p.outOnDay + '.</p>';
+      }
+      html += shareBox('Share my result') + inviteBox(p, 'Your invite link', 'Each friend who joins with it earns you one comeback.');
     }
 
     if (state.ads && state.ads.slot) html += adHtml(state.ads.slot);
@@ -410,46 +445,107 @@
     selected = null;
   }
 
-  function renderAuth() {
+  function choicesHtml(choices) {
+    return ['A', 'B', 'C', 'D'].map(function (L) {
+      return '<button class="choice" id="ch' + L + '" onclick="pick(\'' + L + '\')">' +
+        '<span class="letter">' + L + '</span><span>' + esc(choices[L]) + '</span></button>';
+    }).join('');
+  }
+
+  // A daily reminder people can add to their own calendar (no email needed)
+  function calendarLink() {
+    return '<p class="small center"><button class="link" onclick="downloadReminder()">Add a daily reminder to my calendar</button></p>';
+  }
+  function downloadReminder() {
+    var d = new Date(); d.setDate(d.getDate() + 1);
+    function p(n) { return (n < 10 ? '0' : '') + n; }
+    var day = d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate());
+    var url = state.shareUrl || '';
+    var ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Holdout//EN', 'BEGIN:VEVENT',
+      'UID:holdout-' + Date.now() + '@holdout', 'DTSTAMP:' + day + 'T080000',
+      'DTSTART:' + day + 'T080000', 'DURATION:PT5M', 'RRULE:FREQ=DAILY',
+      'SUMMARY:Holdout: answer today\'s question', 'DESCRIPTION:' + url, 'URL:' + url,
+      'BEGIN:VALARM', 'TRIGGER:PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Holdout time', 'END:VALARM',
+      'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
+    a.download = 'holdout-reminder.ics';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+
+  // ---------- visitors: play first, sign up after ----------
+  function renderVisitor() {
     var invited = state.referrerName && getRef()
-      ? '<p style="margin-top:4px"><b>' + esc(state.referrerName) + '</b> invited you to play!</p>' : '';
-    var joinForm = invited +
-      '<p style="margin-top:4px">Your game starts the moment you join. Your Day 1 question is waiting.</p>' +
-      '<label for="jName">Display name (shown on the leaderboard)</label>' +
+      ? '<p style="margin-top:0"><b>' + esc(state.referrerName) + '</b> invited you to play!</p>' : '';
+    var g = getGuest();
+    if (authMode === 'login') { renderLogin(); return; }
+    if (g && g.done) {
+      $('main').innerHTML = invited + (g.correct
+        ? '<div class="status good">Correct! You\'re in.</div>' +
+          '<p>Save your spot so it counts as question 1 of ' + state.length + '. Your next question unlocks at midnight.</p>'
+        : '<div class="status bad">Not this time.</div>' +
+          '<p>That\'s how fast it can end in Holdout. Join now and your first real question is ready right away.</p>') +
+        joinForm(g.correct ? 'Save my spot' : 'Join and start my run') +
+        '<p class="small center"><button class="link" onclick="setMode(\'login\')">Already playing? Log in</button></p>';
+      return;
+    }
+    $('main').innerHTML = invited +
+      '<div class="small">Try it now, no sign-up needed</div>' +
+      '<div id="guestArea"><div class="loading">Loading a question...</div></div>' +
+      '<p class="small center"><button class="link" onclick="setMode(\'login\')">Already playing? Log in</button></p>';
+    var load = guestQ ? Promise.resolve(guestQ) : call('getGuestQuestion');
+    load.then(function (q) {
+      guestQ = q;
+      $('guestArea').innerHTML = '<div class="qtext">' + esc(q.text) + '</div>' + choicesHtml(q.choices) +
+        '<button class="btn" id="lockBtn" disabled onclick="guestLockIn()">Pick an answer</button>' +
+        '<div class="warn">Get it right to stay in. A wrong answer ends your run.</div>';
+    }).catch(function (e) { $('guestArea').innerHTML = ''; showError(e); });
+  }
+  function guestLockIn() {
+    if (!selected || !guestQ) return;
+    var b = $('lockBtn'); b.disabled = true; b.textContent = 'Checking...';
+    document.querySelectorAll('.choice').forEach(function (c) { c.disabled = true; });
+    var choice = selected;
+    call('guestAnswer', guestQ.id, choice).then(function (r) {
+      setGuest({ id: guestQ.id, choice: choice, correct: !!r.correct, done: true });
+      renderVisitor();
+    }).catch(function (e) { showError(e); b.disabled = false; b.textContent = 'Lock in ' + choice; });
+  }
+  function joinForm(btnText) {
+    return '<label for="jName">Display name (shown on the leaderboard)</label>' +
       '<input type="text" id="jName" maxlength="20" autocomplete="nickname" placeholder="Example: TriviaTom">' +
       '<label for="jPin">Pick a PIN (4 to 6 numbers)</label>' +
       '<input type="password" id="jPin" inputmode="numeric" maxlength="6" autocomplete="new-password">' +
       '<div class="small">Remember your name and PIN. You will need them to play on another phone or computer.</div>' +
       '<label class="check"><input type="checkbox" id="j13"> <span>I am 13 years old or older.</span></label>' +
-      '<button class="btn" id="joinBtn" onclick="doJoin()">Join and start Day 1</button>';
-    var loginForm =
+      '<button class="btn" id="joinBtn" onclick="doJoin()">' + esc(btnText) + '</button>';
+  }
+  function renderLogin() {
+    $('main').innerHTML = '<h2>Log in</h2>' +
       '<label for="lName">Display name</label>' +
       '<input type="text" id="lName" maxlength="20" autocomplete="username">' +
       '<label for="lPin">PIN</label>' +
       '<input type="password" id="lPin" inputmode="numeric" maxlength="6" autocomplete="current-password">' +
-      '<button class="btn" id="loginBtn" onclick="doLogin()">Log in</button>';
-
-    $('main').innerHTML =
-      '<div class="tabs">' +
-        '<button class="tab' + (authMode === 'join' ? ' on' : '') + '" onclick="setMode(\'join\')">Join</button>' +
-        '<button class="tab' + (authMode === 'login' ? ' on' : '') + '" onclick="setMode(\'login\')">Log in</button>' +
-      '</div>' +
-      (authMode === 'join' ? joinForm : loginForm);
+      '<button class="btn" id="loginBtn" onclick="doLogin()">Log in</button>' +
+      '<p class="small center"><button class="link" onclick="setMode(\'join\')">New here? Try a question</button></p>';
   }
-
-  function setMode(m) { authMode = m; clearError(); renderAuth(); }
+  function setMode(m) { authMode = m; clearError(); renderMain(); }
 
   // ---------- actions ----------
   function doJoin() {
     clearError();
-    var btn = $('joinBtn'); btn.disabled = true; btn.textContent = 'Joining...';
-    call('join', $('jName').value, $('jPin').value, $('j13').checked, getRef(), getDevice()).then(function (r) {
+    var btn = $('joinBtn'), label = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Joining...';
+    var g = getGuest();
+    call('join', $('jName').value, $('jPin').value, $('j13').checked, getRef(), getDevice(),
+      g && g.done ? { id: g.id, choice: g.choice } : null).then(function (r) {
       setToken(r.token);
       store('holdout_ref', '');
+      setGuest(null);
       try { history.replaceState(null, '', window.location.pathname); } catch (e) {}
       loadAll();
     }).catch(function (e) {
-      btn.disabled = false; btn.textContent = 'Join and start Day 1'; showError(e);
+      btn.disabled = false; btn.textContent = label; showError(e);
     });
   }
   function doLogin() {
@@ -457,6 +553,7 @@
     var btn = $('loginBtn'); btn.disabled = true; btn.textContent = 'Logging in...';
     call('login', $('lName').value, $('lPin').value, getDevice()).then(function (r) {
       setToken(r.token);
+      setGuest(null);
       loadAll();
     }).catch(function (e) {
       btn.disabled = false; btn.textContent = 'Log in'; showError(e);
@@ -464,7 +561,7 @@
   }
   function doBonus() {
     clearError();
-    var btn = $('bonusBtn'); if (btn) { btn.disabled = true; btn.textContent = 'Opening your question...'; }
+    var btn = $('bonusBtn'); if (btn) { btn.disabled = true; btn.textContent = 'Bringing you back...'; }
     call('useBonus', getToken()).then(loadAll).catch(function (e) { showError(e); loadAll(); });
   }
   function doNewRun() {
@@ -476,7 +573,7 @@
 
   function pick(L) {
     selected = L;
-    ['A', 'B', 'C', 'D'].forEach(function (x) { $('ch' + x).classList.toggle('on', x === L); });
+    ['A', 'B', 'C', 'D'].forEach(function (x) { var el = $('ch' + x); if (el) el.classList.toggle('on', x === L); });
     var b = $('lockBtn'); b.disabled = false; b.textContent = 'Lock in ' + L;
   }
   function lockIn() {
@@ -486,27 +583,33 @@
     document.querySelectorAll('.choice').forEach(function (c) { c.disabled = true; });
     if (timer) clearInterval(timer);
     call('submitAnswer', getToken(), selected).then(function (r) {
+      // update the share text with the new result
+      var p = state.player;
+      p.daysSurvived = r.daysSurvived;
+      p.best = Math.max(p.best, r.daysSurvived);
+      if (r.result === 'wrong') { p.status = 'Out'; p.outOnDay = r.questionNumber; p.outReason = 'Wrong answer'; }
+      if (r.champion) p.status = 'Champion';
       var main = $('main');
       if (r.result === 'correct' && r.champion) {
         main.innerHTML = '<div class="center"><div class="status good">You did it!</div>' +
-          '<p>You survived all ' + state.length + ' days. Welcome to the Hall of Fame!</p></div>';
+          '<p>All ' + r.length + ' in a row. Welcome to the Hall of Fame!</p></div>' + shareBox('Share my win');
       } else if (r.result === 'correct') {
         main.innerHTML = '<div class="center"><div class="status good">Correct!</div>' +
-          '<p>You survived Day ' + r.day + '. Your next question unlocks in:</p>' +
-          '<div class="countdown" id="countdown">' + fmtTime(r.secondsToNext) + '</div>' +
-          '<p class="small">Keep the answer to yourself. Want to keep going now? Invite a friend for a bonus question.</p></div>';
+          '<p>That\'s ' + r.daysSurvived + ' in a row. Your next question unlocks at midnight, in:</p>' +
+          '<div class="countdown cd">' + fmtTime(r.secondsToNext) + '</div>' +
+          '<p class="small">The answer is revealed after midnight, so keep it to yourself.</p></div>' + shareBox('Challenge my friends');
         startCountdown(r.secondsToNext);
       } else if (r.result === 'wrong') {
-        main.innerHTML = '<div class="center"><div class="status bad">Not this time</div>' +
-          '<p>That answer was wrong, so you are out.</p>' +
-          '<p class="small">Invite a friend to get back in right where you left off.</p></div>';
+        main.innerHTML = '<div class="center"><div class="status bad">Run over at question ' + r.questionNumber + '</div>' +
+          '<p>Your best: ' + p.best + ' of ' + r.length + '. The answer unlocks after midnight.</p></div>' +
+          '<button class="btn" onclick="loadAll()">See my options</button>' + shareBox('Share my result');
       } else {
-        main.innerHTML = '<div class="center"><div class="status bad">Time ran out</div>' +
-          '<p>Day ' + r.outOnDay + ' went by without an answer, so you are out.</p></div>';
+        main.innerHTML = '<div class="center"><div class="status bad">Out of pause days</div>' +
+          '<p>Your run ended because too many days went by without an answer.</p></div>' +
+          '<button class="btn" onclick="loadAll()">See my options</button>';
       }
       if (r.disclosure) state.disclosure = r.disclosure;
       if (r.ad) main.innerHTML += adHtml(r.ad);
-      setTimeout(loadAll, r.ad ? 9000 : 6000);
       loadBoard();
     }).catch(function (e) {
       showError(e);
@@ -519,13 +622,14 @@
     var card = $('revealCard');
     var r = state.reveal;
     if (!r) { card.style.display = 'none'; return; }
+    var show = r.answered >= 5;
     var pct = r.answered ? Math.round(100 * r.correct / r.answered) : 0;
     card.style.display = 'block';
     card.innerHTML = '<h2>Your last question</h2>' +
       '<div>' + esc(r.text) + '</div>' +
       '<div class="answer">' + esc(r.correctLetter) + '. ' + esc(r.correctText) + '</div>' +
       (r.funFact ? '<div class="small">' + esc(r.funFact) + '</div>' : '') +
-      (r.answered ? '<p class="small">' + r.correct + ' of ' + r.answered + ' players have gotten this one right (' + pct + '%).</p>' : '') +
+      (show ? '<p class="small">' + pct + '% of ' + r.answered + ' players got this one right.</p>' : '') +
       (state.ads && state.ads.reveal ? adHtml(state.ads.reveal) : '');
   }
 
@@ -540,18 +644,19 @@
     var html = '<h3>Still standing (' + b.alive.length + ')</h3>';
     if (b.alive.length) {
       html += '<ul class="list">' + b.alive.map(function (p) {
-        return '<li><span>' + (p.answeredToday ? '&#10003; ' : '') + esc(p.name) + '</span>' +
-          '<span>' + p.survived + ' of ' + b.length + ' days</span></li>';
+        return '<li><span>' + (p.answeredToday ? '&#10003; ' : '') + esc(p.name) +
+          (p.comebacks ? ' <span class="badge">' + plural(p.comebacks, 'comeback') + '</span>' : '') + '</span>' +
+          '<span>' + p.survived + ' of ' + b.length + '</span></li>';
       }).join('') + '</ul>' +
-        '<p class="small">&#10003; means they already answered their current question.</p>';
+        '<p class="small">&#10003; means they already answered today.</p>';
     } else {
       html += '<p class="small">Nobody yet. Be the first to join!</p>';
     }
     if (b.out.length) {
       html += '<h3>Knocked out (' + b.out.length + ')</h3><ul class="list">' +
         b.out.map(function (p) {
-          return '<li><span>' + esc(p.name) + '</span><span>Out on Day ' + p.outOnDay +
-            (p.reason === 'Missed a day' ? ' (missed)' : '') + ' &middot; best ' + p.best + '</span></li>';
+          return '<li><span>' + esc(p.name) + '</span><span>Out on question ' + p.outOnDay +
+            (/^Missed/.test(p.reason) ? ' (missed days)' : '') + ' &middot; best ' + p.best + '</span></li>';
         }).join('') + '</ul>';
     }
     if (b.recruiters && b.recruiters.length) {
@@ -564,7 +669,8 @@
     if (b.hall && b.hall.length) {
       $('hallCard').style.display = 'block';
       $('hall').innerHTML = '<ul class="list">' + b.hall.map(function (h) {
-        return '<li><span>&#9733; ' + esc(h.name) + (h.attempt > 1 ? ' (run #' + h.attempt + ')' : '') + '</span>' +
+        return '<li><span>&#9733; ' + esc(h.name) + (h.attempt > 1 ? ' (run #' + h.attempt + ')' : '') +
+          (h.comebacks ? ' <span class="badge">' + plural(h.comebacks, 'comeback') + '</span>' : '') + '</span>' +
           '<span>' + esc(h.date) + '</span></li>';
       }).join('') + '</ul>';
     }

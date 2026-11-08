@@ -93,6 +93,11 @@
     <div class="row"><input type="text" id="apiLink" class="linkbox" readonly onclick="this.select()" style="flex:1"><button class="btn light" onclick="copyLink('apiLink')">Copy</button></div>
     <div class="help">This goes in the config.js file on GitHub so the website can talk to this spreadsheet. Players never need it.</div>
   </div>
+  <div class="card">
+    <h2>Are people coming back?</h2>
+    <div class="stats" id="funnel"></div>
+    <div class="help">Played on 2+ days and 7+ days are the numbers that matter most. They show whether people come back.</div>
+  </div>
   <div class="card" id="dashProblems"></div>
   <div class="card">
     <h2>Newest players</h2>
@@ -126,9 +131,11 @@
   <div class="card">
     <div class="row" style="margin-bottom:10px">
       <input type="text" class="search" id="qSearch" placeholder="Search questions" oninput="renderQuestions()">
+      <select id="qLevel" onchange="renderQuestions()"><option value="">All levels</option><option>Easy</option><option>Medium</option><option>Hard</option><option>Very Hard</option></select>
       <button class="btn" onclick="editQuestion(null)">Add a question</button>
-      <span class="muted">Days 1 to <span id="qLen"></span> are the run. Backup rows are used for Second Chance questions.</span>
+      <span class="muted" id="qCounts"></span>
     </div>
+    <div class="help" style="margin-bottom:8px">Each player gets a random question at the right level for their question number (out of <span id="qLen"></span>). Turn a question off instead of deleting it if players have already seen it.</div>
     <div class="scroll"><table id="qTable"></table></div>
   </div>
 </div>
@@ -169,9 +176,9 @@
 <div class="page" id="p-tools">
   <div class="card">
     <h2>Bring back players knocked out by a bad question</h2>
-    <div class="row"><span>Day number:</span><input type="number" id="reviveDay" min="1" style="width:90px">
+    <div class="row"><span>Question ID:</span><input type="text" id="reviveDay" placeholder="Q012" style="width:110px">
       <button class="btn" onclick="reviveDay()">Bring them back</button></div>
-    <div class="help">Everyone who got that day wrong is set back to Alive, and their next question unlocks right away.</div>
+    <div class="help">Everyone knocked out by that question is set back to Alive, it counts as correct, and their next question is available right away. Then turn the question off on the Questions tab.</div>
   </div>
   <div class="card">
     <h2>Give everyone a bonus question</h2>
@@ -259,8 +266,16 @@
       [s.total, 'Total players'], [s.alive, 'Still standing'], [s.out, 'Knocked out'], [s.champions, 'Champions right now'],
       [s.joinedToday, 'Joined today'], [s.answersToday, 'Answers today'], [pct + '%', 'Correct today'],
       [s.friendsInvited, 'Friends invited (all time)'], [s.bonusesWaiting, 'Bonus questions waiting'],
-      [s.hallOfFame, 'Hall of Fame finishes'], [s.newAlerts, 'New cheat alerts', s.newAlerts > 0]
+      [s.hallOfFame, 'Hall of Fame finishes'], [s.guestToday, 'Visitor tries today'], [s.newAlerts, 'New cheat alerts', s.newAlerts > 0]
     ];
+    var f = D.funnel;
+    $('funnel').innerHTML = [
+      [f.guestTries, 'Visitor questions answered'], [f.signups, 'Signed up'], [f.answered1, 'Answered a question'],
+      [f.days2, 'Played on 2+ days'], [f.days7, 'Played on 7+ days'], [f.restarts, 'Free restarts'],
+      [f.comebacks, 'Comebacks used'], [f.shares, 'Results shared']
+    ].map(function (i) {
+      return '<div class="stat"><div class="n">' + esc(i[0]) + '</div><div class="l">' + esc(i[1]) + '</div></div>';
+    }).join('');
     $('stats').innerHTML = items.map(function (i) {
       return '<div class="stat' + (i[2] ? ' warn' : '') + '"><div class="n">' + esc(i[0]) + '</div><div class="l">' + esc(i[1]) + '</div></div>';
     }).join('');
@@ -291,7 +306,7 @@
 
   // ---------- players ----------
   function statusPill(p) {
-    var label = p.status === 'Alive' ? 'Alive, Day ' + p.day : p.status === 'Out' ? 'Out on Day ' + p.outOnDay : p.status;
+    var label = p.status === 'Alive' ? 'Alive, question ' + p.day : p.status === 'Out' ? 'Out on question ' + p.outOnDay : p.status;
     return '<span class="pill ' + esc(p.status) + '">' + esc(label) + '</span>';
   }
   function renderPlayers() {
@@ -310,7 +325,7 @@
       return b.survived - a.survived || a.name.localeCompare(b.name);
     });
     $('pCount').textContent = list.length + ' shown';
-    $('pTable').innerHTML = '<tr><th>Name</th><th>Status</th><th>Days survived</th><th>Best</th><th>Bonus</th><th>Friends</th><th>Joined</th><th>Flags</th></tr>' +
+    $('pTable').innerHTML = '<tr><th>Name</th><th>Status</th><th>Correct in a row</th><th>Best</th><th>Bonus</th><th>Friends</th><th>Joined</th><th>Flags</th></tr>' +
       list.map(function (p) {
         var flags = [];
         if (p.devices > 1) flags.push(p.devices + ' devices');
@@ -327,7 +342,10 @@
     var h = '<h2>' + esc(p.name) + ' ' + statusPill(p) + '</h2><div class="kv">' +
       '<div>Status</div><div>' + esc(p.status) + (p.status === 'Out' ? ' on Day ' + p.outOnDay + esc(why) : '') + '</div>' +
       (p.nextAt ? '<div>Schedule</div><div>' + esc(p.nextAt) + '</div>' : '') +
-      '<div>Days survived</div><div>' + p.survived + ' of ' + D.length + ' (best ever: ' + p.best + ')</div>' +
+      '<div>Correct in a row</div><div>' + p.survived + ' of ' + D.length + ' (best ever: ' + p.best + ')</div>' +
+      '<div>Pause days left</div><div>' + p.pausesLeft + '</div>' +
+      '<div>Comebacks this run</div><div>' + p.comebacks + '</div>' +
+      '<div>Last question</div><div>' + (esc(p.lastQ) || '<span class="muted">none yet</span>') + '</div>' +
       '<div>Run number</div><div>' + p.attempt + '</div>' +
       '<div>Bonus questions</div><div>' + p.bonus + ' waiting, ' + p.bonusUsedToday + ' used today</div>' +
       '<div>Friends invited</div><div>' + p.friends + '</div>' +
@@ -336,14 +354,14 @@
       '<div>Devices used</div><div>' + p.devices + '</div>' +
       '<div>Lightning answers</div><div>' + p.fast + '</div>' +
       '</div>' +
-      '<h3>Bonus questions</h3><div class="actions">' +
+      '<h3>Bonus questions (used for comebacks)</h3><div class="actions">' +
       '<button class="btn" onclick="pAct(\'bonusAdd\')">Give 1 bonus</button>' +
       '<button class="btn light" onclick="pAct(\'bonusRemove\')">Take 1 bonus away</button></div>' +
       '<h3>Game</h3><div class="actions">' +
       (p.status === 'Out' ? '<button class="btn green" onclick="pAct(\'revive\')">Bring back where they left off (free)</button>' : '') +
-      (p.status === 'Alive' ? '<button class="btn light" onclick="pAct(\'skipWait\')">Unlock next question now</button>' +
+      (p.status === 'Alive' ? '<button class="btn light" onclick="pAct(\'pauseAdd\')">Give 1 extra pause day</button>' +
         '<button class="btn red" onclick="pConfirm(\'knockout\',\'Knock this player out of their run?\')">Knock out</button>' : '') +
-      '<button class="btn light" onclick="pConfirm(\'newRun\',\'Start a brand new run at Day 1 for this player?\')">Start a new run at Day 1</button></div>' +
+      '<button class="btn light" onclick="pConfirm(\'newRun\',\'Start a brand new run at question 1 for this player?\')">Start a new run at question 1</button></div>' +
       '<h3>Account</h3><div class="actions">' +
       '<input type="text" id="newPin" placeholder="New PIN (4-6 numbers)" style="width:190px"><button class="btn light" onclick="pAct(\'resetPin\', $(\'newPin\').value)">Set new PIN</button>' +
       '<input type="text" id="newName" placeholder="New display name" style="width:190px"><button class="btn light" onclick="pAct(\'rename\', $(\'newName\').value)">Rename</button>' +
@@ -360,22 +378,26 @@
   function renderQuestions() {
     $('qProblems').innerHTML = '<h2>Question check</h2>' + (D.problems.length
       ? '<ul class="problems">' + D.problems.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>'
-      : '<span class="ok">All ' + D.length + ' days have a question, every answer key is valid, and there are enough backups.</span>');
-    var q = $('qSearch').value.trim().toLowerCase();
+      : '<span class="ok">Every level has plenty of questions and every answer key is valid.</span>');
+    var c = D.levelCounts;
+    $('qCounts').textContent = 'Active: ' + c['Easy'] + ' Easy, ' + c['Medium'] + ' Medium, ' + c['Hard'] + ' Hard, ' + c['Very Hard'] + ' Very Hard';
+    var q = $('qSearch').value.trim().toLowerCase(), lvl = $('qLevel').value;
     var list = D.questions.filter(function (x) {
-      return !q || (x.question + ' ' + x.day + ' ' + x.A + ' ' + x.B + ' ' + x.C + ' ' + x.D).toLowerCase().indexOf(q) >= 0;
+      if (lvl && x.difficulty !== lvl) return false;
+      return !q || (x.question + ' ' + x.id + ' ' + x.A + ' ' + x.B + ' ' + x.C + ' ' + x.D).toLowerCase().indexOf(q) >= 0;
     });
-    $('qTable').innerHTML = '<tr><th>Day</th><th>Level</th><th>Question</th><th>Correct answer</th><th></th></tr>' +
+    $('qTable').innerHTML = '<tr><th>On?</th><th>ID</th><th>Level</th><th>Question</th><th>Correct answer</th><th></th></tr>' +
       list.map(function (x) {
-        return '<tr class="click" onclick="editQuestion(' + x.row + ')"><td><b>' + esc(x.day) + '</b></td><td class="small">' + esc(x.difficulty) +
+        return '<tr><td><input type="checkbox" ' + (x.active ? 'checked' : '') + ' onchange="act(\'panelToggleQuestion\',' + x.row + ',this.checked)"></td>' +
+          '<td><b>' + esc(x.id) + '</b></td><td class="small">' + esc(x.difficulty) +
           '</td><td>' + esc(x.question) + '</td><td>' + esc(x.correct) + '. ' + esc(x[x.correct] || '?') +
-          '</td><td><span class="muted small">Edit</span></td></tr>';
+          '</td><td><button class="btn light" onclick="editQuestion(' + x.row + ')">Edit</button></td></tr>';
       }).join('');
   }
   function editQuestion(row) {
-    var x = row ? D.questions.find(function (q) { return q.row === row; }) : { day: '', difficulty: 'Medium', question: '', A: '', B: '', C: '', D: '', correct: 'A', funFact: '' };
+    var x = row ? D.questions.find(function (q) { return q.row === row; }) : { id: '', difficulty: 'Medium', question: '', A: '', B: '', C: '', D: '', correct: 'A', funFact: '', active: true };
     var h = '<h2>' + (row ? 'Edit question' : 'Add a question') + '</h2><div class="grid2">' +
-      '<label>Day</label><div><input type="text" id="qDay" value="' + esc(x.day) + '"><div class="help">A day number like 5, or Backup 7, or Retired to take it out of use.</div></div>' +
+      '<label>ID</label><div><input type="text" id="qId" value="' + esc(x.id) + '"' + (row ? ' readonly' : '') + '><div class="help">' + (row ? 'IDs can\'t be changed, because answer history uses them.' : 'Leave blank and the next ID is filled in for you.') + '</div></div>' +
       '<label>Difficulty</label><select id="qDiff">' + ['Easy', 'Medium', 'Hard', 'Very Hard'].map(function (d) {
         return '<option' + (d === x.difficulty ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select>' +
       '<label>Question</label><textarea id="qText">' + esc(x.question) + '</textarea>' +
@@ -383,14 +405,16 @@
       '<label>Correct answer</label><select id="qCorrect">' + ['A', 'B', 'C', 'D'].map(function (L) {
         return '<option' + (L === x.correct ? ' selected' : '') + '>' + L + '</option>'; }).join('') + '</select>' +
       '<label>Fun fact</label><textarea id="qFact">' + esc(x.funFact) + '</textarea>' +
+      '<label>Turned on</label><select id="qActive"><option value="yes"' + (x.active ? ' selected' : '') + '>Yes</option><option value="no"' + (!x.active ? ' selected' : '') + '>No</option></select>' +
       '</div><div class="actions" style="justify-content:space-between">' +
       (row ? '<button class="btn red" onclick="if(confirm(\'Delete this question?\'))act(\'panelDeleteQuestion\',' + row + ')">Delete</button>' : '<span></span>') +
       '<span><button class="btn light" onclick="closeModal()">Cancel</button> <button class="btn" onclick="saveQuestion(' + (row || 0) + ')">Save</button></span></div>';
     openModal(h);
   }
   function saveQuestion(row) {
-    act('panelSaveQuestion', { row: row || null, day: $('qDay').value, difficulty: $('qDiff').value, question: $('qText').value,
-      A: $('qA').value, B: $('qB').value, C: $('qC').value, D: $('qD').value, correct: $('qCorrect').value, funFact: $('qFact').value });
+    act('panelSaveQuestion', { row: row || null, id: $('qId').value, difficulty: $('qDiff').value, question: $('qText').value,
+      A: $('qA').value, B: $('qB').value, C: $('qC').value, D: $('qD').value, correct: $('qCorrect').value, funFact: $('qFact').value,
+      active: $('qActive').value === 'yes' });
   }
 
   // ---------- Amazon picks ----------
@@ -407,7 +431,7 @@
   function editAd(row) {
     var a = row ? D.ads.find(function (x) { return x.row === row; }) : { showOn: '', headline: '', product: '', url: '', active: true };
     var h = '<h2>' + (row ? 'Edit Amazon pick' : 'Add an Amazon pick') + '</h2><div class="grid2">' +
-      '<label>Show on</label><div><input type="text" id="aShow" value="' + esc(a.showOn) + '"><div class="help">A Day number (shows on that question\'s answer), or Knockout, Waiting, or Champion.</div></div>' +
+      '<label>Show on</label><div><input type="text" id="aShow" value="' + esc(a.showOn) + '"><div class="help">A question ID like Q012 (shows on that question\'s answer), or Knockout, Waiting, or Champion.</div></div>' +
       '<label>Headline</label><input type="text" id="aHead" value="' + esc(a.headline) + '">' +
       '<label>Product name</label><input type="text" id="aProd" value="' + esc(a.product) + '">' +
       '<label>Amazon link</label><div><input type="text" id="aUrl" value="' + esc(a.url) + '"><div class="help">Paste a link from Amazon (SiteStripe Text link works best). Your tag is added automatically.</div></div>' +
@@ -460,8 +484,8 @@
   // ---------- tools ----------
   function reviveDay() {
     var d = $('reviveDay').value;
-    if (!d) { toast('Type a day number first.', true); return; }
-    if (confirm('Bring back everyone who got Day ' + d + ' wrong?')) act('panelReviveDay', d);
+    if (!d) { toast('Type a question ID first, like Q012.', true); return; }
+    if (confirm('Bring back everyone knocked out by ' + d + '?')) act('panelReviveQuestion', d);
   }
   function giveEveryone() { if (confirm('Give every player 1 bonus question?')) act('panelGiveEveryoneBonus'); }
   function runChecks() { act('panelRunChecks'); }
