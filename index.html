@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-MQ9KZMMZ');</script>
+<!-- End Google Tag Manager -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Holdout</title>
@@ -131,6 +138,10 @@
 </style>
 </head>
 <body>
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MQ9KZMMZ"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
 <div class="wrap">
 
   <header>
@@ -172,6 +183,7 @@
     <details>
       <summary>Privacy and rules</summary>
       <p>Players must be 13 or older.</p>
+      <p>We use Google Analytics to count visits and see which parts of the game people use. It uses cookies and does not receive your display name or PIN.</p>
       <p>We only store the display name you choose, a scrambled version of your PIN, when you joined, your answers and how long they took, and a random code for your browser that helps us spot cheating. We do not ask for your email or real name, and we never sell or share your information.</p>
       <p>Playing more than one account, or making fake accounts to earn comebacks, gets you removed.</p>
       <p>Your display name appears on the public leaderboard, so do not use your full real name.</p>
@@ -192,6 +204,11 @@
   var authMode = 'join';
   var lastBoard = null;
   var guestQ = null;
+
+  // ---------- analytics: game events sent to Google Tag Manager ----------
+  function track(event, params) {
+    try { window.dataLayer = window.dataLayer || []; window.dataLayer.push(Object.assign({ event: event }, params || {})); } catch (e) {}
+  }
 
   // ---------- small helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -336,6 +353,7 @@
     var text = shareText(), url = shareLink();
     var short = text.replace(url, '').trim();
     call('logShare', where).catch(function () {});
+    track('share', { method: where, content_type: 'result' });
     if (where === 'phone') {
       navigator.share({ text: text }).catch(function () {});
     } else if (where === 'facebook') {
@@ -405,6 +423,7 @@
     if (!reason) { showError(new Error('Pick what is wrong with the question.')); return; }
     call('reportQuestion', getToken(), qid, reason, $('repNote_' + qid).value).then(function (r) {
       store('holdout_reported_' + qid, '1');
+      track('holdout_report_question', { reason: reason });
       $('rep_' + qid).innerHTML = '<p class="small">' + esc(r.message) + '</p>';
     }).catch(showError);
   }
@@ -629,6 +648,7 @@
     var choice = selected;
     call('guestAnswer', guestQ.id, choice).then(function (r) {
       setGuest({ id: guestQ.id, choice: choice, correct: !!r.correct, done: true });
+      track('holdout_visitor_answer', { correct: !!r.correct });
       renderVisitor();
     }).catch(function (e) { showError(e); b.disabled = false; b.textContent = 'Lock in ' + choice; });
   }
@@ -660,6 +680,7 @@
     var g = getGuest();
     call('join', $('jName').value, $('jPin').value, $('j13').checked, getRef(), getDevice(),
       g && g.done ? { id: g.id, choice: g.choice } : null).then(function (r) {
+      track('sign_up', { method: 'name_pin', invited: !!getRef() });
       setToken(r.token);
       store('holdout_ref', '');
       setGuest(null);
@@ -683,11 +704,13 @@
   function doBonus() {
     clearError();
     var btn = $('bonusBtn'); if (btn) { btn.disabled = true; btn.textContent = 'Bringing you back...'; }
+    track('holdout_comeback');
     call('useBonus', getToken()).then(loadAll).catch(function (e) { showError(e); loadAll(); });
   }
   function doNewRun() {
     clearError();
     var btn = $('runBtn'); if (btn) { btn.disabled = true; btn.textContent = 'Starting...'; }
+    track('holdout_new_run');
     call('newRun', getToken()).then(loadAll).catch(function (e) { showError(e); loadAll(); });
   }
   function logout() { clearToken(); authMode = 'login'; loadAll(); }
@@ -704,6 +727,7 @@
     document.querySelectorAll('.choice').forEach(function (c) { c.disabled = true; });
     if (timer) clearInterval(timer);
     call('submitAnswer', getToken(), selected).then(function (r) {
+      track('holdout_answer', { result: r.result, question_number: r.questionNumber, champion: !!r.champion });
       // update the share text with the new result
       var p = state.player;
       p.daysSurvived = r.daysSurvived;
