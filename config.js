@@ -3,5 +3,5 @@
 // Where to find it: open your Apps Script project, click Deploy, then Manage deployments,
 // and copy the Web app URL. (It is also shown on the Admin Panel Dashboard.)
 window.HOLDOUT_CONFIG = {
-  API_URL: 'PASTE_YOUR_APPS_SCRIPT_LINK_HERE'
+  API_URL: 'https://script.google.com/macros/s/AKfycbwc0iIUiY9YZaJX5KcTUO0oKS9v_p4Iq0s8ib4TmMrLEz0JTupFVTqDRDV1VwT9myQo/exec'
 };
