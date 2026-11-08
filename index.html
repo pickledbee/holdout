@@ -119,6 +119,8 @@
   .ico.fb { background: #1877f2; } .ico.ig { background: linear-gradient(45deg, #f58529, #dd2a7b, #8134af); }
   .ico.em { background: #5b6b8c; } .ico.tx { background: #2fb34a; } .ico.xx { background: #000; } .ico.cp { background: #3a4767; }
   #shareNote { margin-top: 8px; color: var(--accent); }
+  .emailpick { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; color: var(--text); }
+  .emailpick button { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--accent); background: var(--bg); color: var(--accent); font-weight: 700; }
   .badge { font-size: 11px; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 7px; margin-left: 4px; white-space: nowrap; }
   .reportbox { margin-top: 12px; }
   .reportbox select, .reportbox input { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: 15px; margin-top: 6px; }
@@ -322,6 +324,14 @@
     if (w) { try { w.opener = null; } catch (e) {} return; }
     shareNote('Your browser blocked the pop-up. Allow pop-ups for this site, or use Copy and paste it in.');
   }
+  function sendEmail(service) {
+    var subject = 'Can you outlast me on Holdout?', body = shareText();
+    var s = encodeURIComponent(subject), b = encodeURIComponent(body);
+    if (service === 'gmail') openWin('https://mail.google.com/mail/?view=cm&fs=1&su=' + s + '&body=' + b);
+    else if (service === 'outlook') openWin('https://outlook.live.com/mail/0/deeplink/compose?subject=' + s + '&body=' + b);
+    else if (service === 'yahoo') openWin('https://compose.mail.yahoo.com/?subject=' + s + '&body=' + b);
+    else window.location.href = 'mailto:?subject=' + s + '&body=' + b;
+  }
   function shareTo(where) {
     var text = shareText(), url = shareLink();
     var short = text.replace(url, '').trim();
@@ -342,8 +352,13 @@
         shareNote('Copied! Instagram doesn\'t let websites post for you, so paste it into a story, post, or message in the Instagram app.');
       }
     } else if (where === 'email') {
-      window.location.href = 'mailto:?subject=' + encodeURIComponent('Can you outlast me on Holdout?') +
-        '&body=' + encodeURIComponent(text);
+      // Let people pick their email, since many computers have no email app set up
+      var n = $('shareNote');
+      if (n) n.innerHTML = '<div class="emailpick">Send with: ' +
+        '<button onclick="sendEmail(\'gmail\')">Gmail</button>' +
+        '<button onclick="sendEmail(\'outlook\')">Outlook</button>' +
+        '<button onclick="sendEmail(\'yahoo\')">Yahoo</button>' +
+        '<button onclick="sendEmail(\'app\')">Email app</button></div>';
     } else if (where === 'text') {
       var sep = /iPhone|iPad|iPod|Mac/i.test(navigator.userAgent) ? '&' : '?';
       window.location.href = 'sms:' + sep + 'body=' + encodeURIComponent(text);
