@@ -316,7 +316,12 @@
   }
   function shareLink() { var p = state.player; return (p && p.inviteUrl) || state.shareUrl || ''; }
   function shareNote(msg) { var n = $('shareNote'); if (n) n.textContent = msg; }
-  function openWin(url) { var w = window.open(url, '_blank', 'noopener,width=620,height=640'); if (!w) window.location.href = url; }
+  // Opens Facebook or X in one pop-up window. (Never also moves the game page itself.)
+  function openWin(url) {
+    var w = window.open(url, 'holdoutshare', 'width=620,height=640');
+    if (w) { try { w.opener = null; } catch (e) {} return; }
+    shareNote('Your browser blocked the pop-up. Allow pop-ups for this site, or use Copy and paste it in.');
+  }
   function shareTo(where) {
     var text = shareText(), url = shareLink();
     var short = text.replace(url, '').trim();
