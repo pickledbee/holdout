@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_blank">
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #1d2433; background: #f4f6fb; font-size: 14px; }
+  .top { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #1f2a44; color: #fff; }
+  .top h1 { font-size: 18px; margin: 0; letter-spacing: 2px; }
+  .top .spacer { flex: 1; }
+  .top a, .top button { color: #fff; background: rgba(255,255,255,.12); border: 0; border-radius: 8px; padding: 7px 12px; text-decoration: none; font: inherit; cursor: pointer; }
+  .tabs { display: flex; gap: 4px; padding: 10px 16px 0; background: #e8ecf5; flex-wrap: wrap; }
+  .tab { border: 0; background: transparent; padding: 10px 14px; border-radius: 8px 8px 0 0; font: inherit; cursor: pointer; color: #4a5570; }
+  .tab.on { background: #fff; color: #1d2433; font-weight: 700; }
+  .tab .badge { background: #e5484d; color: #fff; border-radius: 999px; padding: 1px 7px; font-size: 12px; margin-left: 4px; }
+  .page { display: none; padding: 16px; }
+  .page.on { display: block; }
+  .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .card h2 { margin: 0 0 10px; font-size: 16px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .stat { background: #fff; border-radius: 12px; padding: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+  .stat .n { font-size: 26px; font-weight: 800; }
+  .stat .l { color: #6b7590; font-size: 13px; }
+  .stat.warn .n { color: #e5484d; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px; border-bottom: 1px solid #edf0f6; vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; color: #6b7590; letter-spacing: .5px; position: sticky; top: 0; background: #fff; }
+  tr.click { cursor: pointer; }
+  tr.click:hover td { background: #f6f8fd; }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+  .Alive { background: #ddf6ea; color: #13794a; }
+  .Out { background: #fde4e4; color: #b42318; }
+  .Champion { background: #fff1d6; color: #a15c00; }
+  .btn { border: 0; border-radius: 8px; padding: 8px 12px; font: inherit; cursor: pointer; background: #1f2a44; color: #fff; }
+  .btn.light { background: #e8ecf5; color: #1d2433; }
+  .btn.red { background: #e5484d; }
+  .btn.green { background: #13794a; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  input[type=text], input[type=number], select, textarea { font: inherit; padding: 8px; border: 1px solid #cfd6e4; border-radius: 8px; background: #fff; }
+  textarea { width: 100%; min-height: 60px; }
+  .search { width: 280px; }
+  .muted { color: #6b7590; }
+  .small { font-size: 12px; }
+  .problems li { margin-bottom: 4px; color: #b42318; }
+  .ok { color: #13794a; font-weight: 700; }
+  .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: #1d2433; color: #fff; padding: 10px 16px; border-radius: 10px; display: none; z-index: 50; max-width: 80%; }
+  .toast.err { background: #b42318; }
+  .scroll { max-height: 560px; overflow: auto; }
+  .overlay { position: fixed; inset: 0; background: rgba(15,22,38,.45); display: none; align-items: flex-start; justify-content: center; padding-top: 40px; z-index: 40; }
+  .modal { background: #fff; border-radius: 14px; width: 720px; max-width: 95%; max-height: 85vh; overflow: auto; padding: 18px; }
+  .modal h2 { margin-top: 0; }
+  .grid2 { display: grid; grid-template-columns: 140px 1fr; gap: 8px 12px; align-items: center; }
+  .grid2 input[type=text], .grid2 select { width: 100%; }
+  .kv { display: grid; grid-template-columns: 180px 1fr; gap: 6px 12px; margin-bottom: 12px; }
+  .kv div:nth-child(odd) { color: #6b7590; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .help { color: #6b7590; font-size: 12px; margin-top: 2px; }
+  .linkbox { width: 100%; }
+  a.inline { color: #1f4fd1; }
+  .new { border-left: 4px solid #e5484d; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1 id="title">HOLDOUT ADMIN</h1>
+  <span class="muted" style="color:#b8c3dc" id="updated"></span>
+  <div class="spacer"></div>
+  <button onclick="openGame()">Open the game</button>
+  <button onclick="load()">Refresh</button>
+</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab on" data-p="dash">Dashboard</button>
+  <button class="tab" data-p="players">Players</button>
+  <button class="tab" data-p="questions">Questions <span class="badge" id="probBadge" style="display:none"></span></button>
+  <button class="tab" data-p="ads">Amazon Picks</button>
+  <button class="tab" data-p="alerts">Cheat Alerts <span class="badge" id="alertBadge" style="display:none"></span></button>
+  <button class="tab" data-p="settings">Settings</button>
+  <button class="tab" data-p="tools">Tools</button>
+</div>
+
+<!-- DASHBOARD -->
+<div class="page on" id="p-dash">
+  <div class="stats" id="stats"></div>
+  <div class="card" style="margin-top:14px">
+    <h2>Your game link</h2>
+    <div class="row"><input type="text" id="shareLink" class="linkbox" readonly onclick="this.select()" style="flex:1"><button class="btn" onclick="copyLink('shareLink')">Copy</button></div>
+    <div class="help">Share this link with players. Each player also has their own invite link inside the game.</div>
+    <h2 style="margin-top:14px">Apps Script link for GitHub (config.js)</h2>
+    <div class="row"><input type="text" id="apiLink" class="linkbox" readonly onclick="this.select()" style="flex:1"><button class="btn light" onclick="copyLink('apiLink')">Copy</button></div>
+    <div class="help">This goes in the config.js file on GitHub so the website can talk to this spreadsheet. Players never need it.</div>
+  </div>
+  <div class="card" id="dashProblems"></div>
+  <div class="card">
+    <h2>Newest players</h2>
+    <div id="newest"></div>
+  </div>
+</div>
+
+<!-- PLAYERS -->
+<div class="page" id="p-players">
+  <div class="card">
+    <div class="row" style="margin-bottom:10px">
+      <input type="text" class="search" id="pSearch" placeholder="Search by name" oninput="renderPlayers()">
+      <select id="pFilter" onchange="renderPlayers()">
+        <option value="">Everyone</option><option>Alive</option><option>Out</option><option>Champion</option>
+        <option value="bonus">Has bonus questions</option><option value="recruiter">Invited friends</option>
+      </select>
+      <select id="pSort" onchange="renderPlayers()">
+        <option value="survived">Sort: days survived</option><option value="joined">Sort: newest</option>
+        <option value="friends">Sort: friends invited</option><option value="name">Sort: name</option>
+      </select>
+      <span class="muted" id="pCount"></span>
+    </div>
+    <div class="scroll"><table id="pTable"></table></div>
+    <div class="help">Click a player to see details and make changes.</div>
+  </div>
+</div>
+
+<!-- QUESTIONS -->
+<div class="page" id="p-questions">
+  <div class="card" id="qProblems"></div>
+  <div class="card">
+    <div class="row" style="margin-bottom:10px">
+      <input type="text" class="search" id="qSearch" placeholder="Search questions" oninput="renderQuestions()">
+      <button class="btn" onclick="editQuestion(null)">Add a question</button>
+      <span class="muted">Days 1 to <span id="qLen"></span> are the run. Backup rows are used for Second Chance questions.</span>
+    </div>
+    <div class="scroll"><table id="qTable"></table></div>
+  </div>
+</div>
+
+<!-- AMAZON PICKS -->
+<div class="page" id="p-ads">
+  <div class="card">
+    <div class="row" style="margin-bottom:10px">
+      <button class="btn" onclick="editAd(null)">Add an Amazon pick</button>
+      <span class="muted">Every link gets your tag added automatically. Players see: "As an Amazon Associate I earn from qualifying purchases."</span>
+    </div>
+    <div class="scroll"><table id="adTable"></table></div>
+  </div>
+</div>
+
+<!-- CHEAT ALERTS -->
+<div class="page" id="p-alerts">
+  <div class="card">
+    <div class="row" style="margin-bottom:10px">
+      <select id="aFilter" onchange="renderAlerts()"><option value="new">New only</option><option value="all">All alerts</option></select>
+      <button class="btn light" onclick="markAll()">Mark all as reviewed</button>
+      <span class="muted">An alert is a reason to look, not proof. Click a player name to open them.</span>
+    </div>
+    <div class="scroll"><table id="aTable"></table></div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="page" id="p-settings">
+  <div class="card">
+    <h2>Game settings</h2>
+    <div id="settingsForm"></div>
+    <div class="actions"><button class="btn" onclick="saveSettings()">Save settings</button></div>
+  </div>
+</div>
+
+<!-- TOOLS -->
+<div class="page" id="p-tools">
+  <div class="card">
+    <h2>Bring back players knocked out by a bad question</h2>
+    <div class="row"><span>Day number:</span><input type="number" id="reviveDay" min="1" style="width:90px">
+      <button class="btn" onclick="reviveDay()">Bring them back</button></div>
+    <div class="help">Everyone who got that day wrong is set back to Alive, and their next question unlocks right away.</div>
+  </div>
+  <div class="card">
+    <h2>Give everyone a bonus question</h2>
+    <button class="btn" onclick="giveEveryone()">Give every player 1 bonus</button>
+    <div class="help">Good for a holiday or a "sorry for the bad question" gift.</div>
+  </div>
+  <div class="card">
+    <h2>Run checks now</h2>
+    <button class="btn" onclick="runChecks()">Run missed-day and cheat checks</button>
+    <div class="help">These also run by themselves every hour.</div>
+  </div>
+  <div class="card">
+    <h2>Open the spreadsheet tabs</h2>
+    <div class="help">Everything here is saved in your spreadsheet. You can always edit the tabs directly.</div>
+    <div class="actions"><a class="btn light" id="sheetLink" href="#" style="text-decoration:none">Open the spreadsheet</a></div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+  var D = null;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function call(fn) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return new Promise(function (res, rej) {
+      var r = google.script.run.withSuccessHandler(res).withFailureHandler(rej);
+      r[fn].apply(r, args);
+    });
+  }
+  function toast(msg, isErr) {
+    var t = $('toast');
+    t.textContent = String(msg && msg.message ? msg.message : msg).replace(/^(Error|Exception):\s*/i, '');
+    t.className = 'toast' + (isErr ? ' err' : '');
+    t.style.display = 'block';
+    clearTimeout(window._tt);
+    window._tt = setTimeout(function () { t.style.display = 'none'; }, isErr ? 6000 : 3000);
+  }
+  function act(fn) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return call.apply(null, [fn].concat(args)).then(function (msg) { toast(msg); closeModal(); return load(); })
+      .catch(function (e) { toast(e, true); });
+  }
+
+  // tabs
+  document.querySelectorAll('.tab').forEach(function (b) {
+    b.onclick = function () {
+      document.querySelectorAll('.tab').forEach(function (x) { x.classList.remove('on'); });
+      document.querySelectorAll('.page').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+      $('p-' + b.getAttribute('data-p')).classList.add('on');
+    };
+  });
+  function goTab(name) { document.querySelector('.tab[data-p="' + name + '"]').click(); }
+
+  // ---------- load ----------
+  function load() {
+    $('updated').textContent = 'Loading...';
+    return call('panelGetData').then(function (d) {
+      D = d;
+      $('title').textContent = (d.gameName || 'Holdout').toUpperCase() + ' ADMIN';
+      $('updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+      $('shareLink').value = d.gameUrl || 'Link not found yet. See "Things that need attention" below.';
+      $('apiLink').value = d.apiUrl || 'Not found yet: in Apps Script click Deploy > Manage deployments and copy the Web app URL.';
+      $('sheetLink').href = d.sheetUrl;
+      $('qLen').textContent = d.length;
+      var pb = $('probBadge'); pb.style.display = d.problems.length ? 'inline' : 'none'; pb.textContent = d.problems.length;
+      var ab = $('alertBadge'); ab.style.display = d.stats.newAlerts ? 'inline' : 'none'; ab.textContent = d.stats.newAlerts;
+      renderDash(); renderPlayers(); renderQuestions(); renderAds(); renderAlerts(); renderSettings();
+    }).catch(function (e) { $('updated').textContent = ''; toast(e, true); });
+  }
+
+  // ---------- dashboard ----------
+  function renderDash() {
+    var s = D.stats;
+    var pct = s.answersToday ? Math.round(100 * s.correctToday / s.answersToday) : 0;
+    var items = [
+      [s.total, 'Total players'], [s.alive, 'Still standing'], [s.out, 'Knocked out'], [s.champions, 'Champions right now'],
+      [s.joinedToday, 'Joined today'], [s.answersToday, 'Answers today'], [pct + '%', 'Correct today'],
+      [s.friendsInvited, 'Friends invited (all time)'], [s.bonusesWaiting, 'Bonus questions waiting'],
+      [s.hallOfFame, 'Hall of Fame finishes'], [s.newAlerts, 'New cheat alerts', s.newAlerts > 0]
+    ];
+    $('stats').innerHTML = items.map(function (i) {
+      return '<div class="stat' + (i[2] ? ' warn' : '') + '"><div class="n">' + esc(i[0]) + '</div><div class="l">' + esc(i[1]) + '</div></div>';
+    }).join('');
+    $('dashProblems').innerHTML = '<h2>Things that need attention</h2>' + problemsHtml(true);
+    var newest = D.players.slice().sort(function (a, b) { return b.joinedMs - a.joinedMs; }).slice(0, 8);
+    $('newest').innerHTML = newest.length ? '<table>' + newest.map(function (p) {
+      return '<tr class="click" onclick="openPlayer(\'' + p.id + '\')"><td><b>' + esc(p.name) + '</b></td><td>' + statusPill(p) +
+        '</td><td class="muted">' + esc(p.joined) + '</td><td class="muted">' + (p.invitedBy ? 'Invited by ' + esc(p.invitedBy) : '') + '</td></tr>';
+    }).join('') + '</table>' : '<span class="muted">No players yet.</span>';
+  }
+  function problemsHtml(withAlerts) {
+    var list = D.problems.slice();
+    if (withAlerts && D.stats.newAlerts) list.unshift(D.stats.newAlerts + ' new cheat alert(s). See the Cheat Alerts tab.');
+    if (!D.gameUrl) list.unshift('Game link not found yet. Put your website address in Game Website on the Settings tab.');
+    return list.length ? '<ul class="problems">' + list.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>'
+      : '<span class="ok">Everything looks good.</span>';
+  }
+  function openGame() {
+    if (!D || !D.gameUrl) { toast('Game link not found yet. Put it in Game Website on the Settings tab.', true); return; }
+    var w = window.open(D.gameUrl, '_blank');
+    if (w) { try { w.opener = null; } catch (e) {} return; }
+    toast('Your browser blocked the new tab. Copy the game link on the Dashboard and paste it into a new tab.', true);
+  }
+  function copyLink(id) {
+    var i = $(id || 'shareLink'); i.select();
+    try { document.execCommand('copy'); toast('Link copied.'); } catch (e) { toast('Select the link and copy it.'); }
+  }
+
+  // ---------- players ----------
+  function statusPill(p) {
+    var label = p.status === 'Alive' ? 'Alive, Day ' + p.day : p.status === 'Out' ? 'Out on Day ' + p.outOnDay : p.status;
+    return '<span class="pill ' + esc(p.status) + '">' + esc(label) + '</span>';
+  }
+  function renderPlayers() {
+    var q = $('pSearch').value.trim().toLowerCase(), f = $('pFilter').value, sort = $('pSort').value;
+    var list = D.players.filter(function (p) {
+      if (q && p.name.toLowerCase().indexOf(q) < 0) return false;
+      if (f === 'bonus') return p.bonus > 0;
+      if (f === 'recruiter') return p.friends > 0;
+      if (f) return p.status === f;
+      return true;
+    });
+    list.sort(function (a, b) {
+      if (sort === 'joined') return b.joinedMs - a.joinedMs;
+      if (sort === 'friends') return b.friends - a.friends;
+      if (sort === 'name') return a.name.localeCompare(b.name);
+      return b.survived - a.survived || a.name.localeCompare(b.name);
+    });
+    $('pCount').textContent = list.length + ' shown';
+    $('pTable').innerHTML = '<tr><th>Name</th><th>Status</th><th>Days survived</th><th>Best</th><th>Bonus</th><th>Friends</th><th>Joined</th><th>Flags</th></tr>' +
+      list.map(function (p) {
+        var flags = [];
+        if (p.devices > 1) flags.push(p.devices + ' devices');
+        if (p.fast >= 3) flags.push(p.fast + ' lightning answers');
+        return '<tr class="click" onclick="openPlayer(\'' + p.id + '\')"><td><b>' + esc(p.name) + '</b></td><td>' + statusPill(p) +
+          '</td><td>' + p.survived + ' of ' + D.length + '</td><td>' + p.best + '</td><td>' + p.bonus + '</td><td>' + p.friends +
+          '</td><td class="muted small">' + esc(p.joined) + '</td><td class="small" style="color:#b42318">' + esc(flags.join(', ')) + '</td></tr>';
+      }).join('');
+  }
+  function openPlayer(id) {
+    var p = D.players.find(function (x) { return x.id === id; });
+    if (!p) { toast('Player not found. Click Refresh.', true); return; }
+    var why = p.reason ? ' (' + p.reason + ')' : '';
+    var h = '<h2>' + esc(p.name) + ' ' + statusPill(p) + '</h2><div class="kv">' +
+      '<div>Status</div><div>' + esc(p.status) + (p.status === 'Out' ? ' on Day ' + p.outOnDay + esc(why) : '') + '</div>' +
+      (p.nextAt ? '<div>Schedule</div><div>' + esc(p.nextAt) + '</div>' : '') +
+      '<div>Days survived</div><div>' + p.survived + ' of ' + D.length + ' (best ever: ' + p.best + ')</div>' +
+      '<div>Run number</div><div>' + p.attempt + '</div>' +
+      '<div>Bonus questions</div><div>' + p.bonus + ' waiting, ' + p.bonusUsedToday + ' used today</div>' +
+      '<div>Friends invited</div><div>' + p.friends + '</div>' +
+      '<div>Invited by</div><div>' + (esc(p.invitedBy) || '<span class="muted">nobody</span>') + '</div>' +
+      '<div>Joined</div><div>' + esc(p.joined) + '</div>' +
+      '<div>Devices used</div><div>' + p.devices + '</div>' +
+      '<div>Lightning answers</div><div>' + p.fast + '</div>' +
+      '</div>' +
+      '<h3>Bonus questions</h3><div class="actions">' +
+      '<button class="btn" onclick="pAct(\'bonusAdd\')">Give 1 bonus</button>' +
+      '<button class="btn light" onclick="pAct(\'bonusRemove\')">Take 1 bonus away</button></div>' +
+      '<h3>Game</h3><div class="actions">' +
+      (p.status === 'Out' ? '<button class="btn green" onclick="pAct(\'revive\')">Bring back where they left off (free)</button>' : '') +
+      (p.status === 'Alive' ? '<button class="btn light" onclick="pAct(\'skipWait\')">Unlock next question now</button>' +
+        '<button class="btn red" onclick="pConfirm(\'knockout\',\'Knock this player out of their run?\')">Knock out</button>' : '') +
+      '<button class="btn light" onclick="pConfirm(\'newRun\',\'Start a brand new run at Day 1 for this player?\')">Start a new run at Day 1</button></div>' +
+      '<h3>Account</h3><div class="actions">' +
+      '<input type="text" id="newPin" placeholder="New PIN (4-6 numbers)" style="width:190px"><button class="btn light" onclick="pAct(\'resetPin\', $(\'newPin\').value)">Set new PIN</button>' +
+      '<input type="text" id="newName" placeholder="New display name" style="width:190px"><button class="btn light" onclick="pAct(\'rename\', $(\'newName\').value)">Rename</button>' +
+      '<button class="btn light" onclick="pAct(\'logout\')">Log them out everywhere</button>' +
+      '<button class="btn red" onclick="pConfirm(\'delete\',\'Delete this player for good? This cannot be undone.\')">Delete player</button></div>' +
+      '<div class="actions" style="justify-content:flex-end"><button class="btn light" onclick="closeModal()">Close</button></div>';
+    window._pid = id;
+    openModal(h);
+  }
+  function pAct(action, value) { act('panelPlayerAction', window._pid, action, value || ''); }
+  function pConfirm(action, msg) { if (confirm(msg)) pAct(action); }
+
+  // ---------- questions ----------
+  function renderQuestions() {
+    $('qProblems').innerHTML = '<h2>Question check</h2>' + (D.problems.length
+      ? '<ul class="problems">' + D.problems.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>'
+      : '<span class="ok">All ' + D.length + ' days have a question, every answer key is valid, and there are enough backups.</span>');
+    var q = $('qSearch').value.trim().toLowerCase();
+    var list = D.questions.filter(function (x) {
+      return !q || (x.question + ' ' + x.day + ' ' + x.A + ' ' + x.B + ' ' + x.C + ' ' + x.D).toLowerCase().indexOf(q) >= 0;
+    });
+    $('qTable').innerHTML = '<tr><th>Day</th><th>Level</th><th>Question</th><th>Correct answer</th><th></th></tr>' +
+      list.map(function (x) {
+        return '<tr class="click" onclick="editQuestion(' + x.row + ')"><td><b>' + esc(x.day) + '</b></td><td class="small">' + esc(x.difficulty) +
+          '</td><td>' + esc(x.question) + '</td><td>' + esc(x.correct) + '. ' + esc(x[x.correct] || '?') +
+          '</td><td><span class="muted small">Edit</span></td></tr>';
+      }).join('');
+  }
+  function editQuestion(row) {
+    var x = row ? D.questions.find(function (q) { return q.row === row; }) : { day: '', difficulty: 'Medium', question: '', A: '', B: '', C: '', D: '', correct: 'A', funFact: '' };
+    var h = '<h2>' + (row ? 'Edit question' : 'Add a question') + '</h2><div class="grid2">' +
+      '<label>Day</label><div><input type="text" id="qDay" value="' + esc(x.day) + '"><div class="help">A day number like 5, or Backup 7, or Retired to take it out of use.</div></div>' +
+      '<label>Difficulty</label><select id="qDiff">' + ['Easy', 'Medium', 'Hard', 'Very Hard'].map(function (d) {
+        return '<option' + (d === x.difficulty ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select>' +
+      '<label>Question</label><textarea id="qText">' + esc(x.question) + '</textarea>' +
+      ['A', 'B', 'C', 'D'].map(function (L) { return '<label>Answer ' + L + '</label><input type="text" id="q' + L + '" value="' + esc(x[L]) + '">'; }).join('') +
+      '<label>Correct answer</label><select id="qCorrect">' + ['A', 'B', 'C', 'D'].map(function (L) {
+        return '<option' + (L === x.correct ? ' selected' : '') + '>' + L + '</option>'; }).join('') + '</select>' +
+      '<label>Fun fact</label><textarea id="qFact">' + esc(x.funFact) + '</textarea>' +
+      '</div><div class="actions" style="justify-content:space-between">' +
+      (row ? '<button class="btn red" onclick="if(confirm(\'Delete this question?\'))act(\'panelDeleteQuestion\',' + row + ')">Delete</button>' : '<span></span>') +
+      '<span><button class="btn light" onclick="closeModal()">Cancel</button> <button class="btn" onclick="saveQuestion(' + (row || 0) + ')">Save</button></span></div>';
+    openModal(h);
+  }
+  function saveQuestion(row) {
+    act('panelSaveQuestion', { row: row || null, day: $('qDay').value, difficulty: $('qDiff').value, question: $('qText').value,
+      A: $('qA').value, B: $('qB').value, C: $('qC').value, D: $('qD').value, correct: $('qCorrect').value, funFact: $('qFact').value });
+  }
+
+  // ---------- Amazon picks ----------
+  function renderAds() {
+    $('adTable').innerHTML = '<tr><th>On?</th><th>Show on</th><th>Headline</th><th>Product</th><th>Link</th><th></th></tr>' +
+      D.ads.map(function (a) {
+        return '<tr><td><input type="checkbox" ' + (a.active ? 'checked' : '') + ' onchange="act(\'panelToggleAd\',' + a.row + ',this.checked)"></td>' +
+          '<td><b>' + esc(a.showOn) + '</b></td><td>' + esc(a.headline) + '</td><td>' + esc(a.product) + '</td><td>' +
+          (a.finalUrl ? '<a class="inline" href="' + esc(a.finalUrl) + '" target="_blank" rel="noopener">Test link</a>'
+            : '<span style="color:#b42318">Not a working Amazon link</span>') +
+          '</td><td><button class="btn light" onclick="editAd(' + a.row + ')">Edit</button></td></tr>';
+      }).join('');
+  }
+  function editAd(row) {
+    var a = row ? D.ads.find(function (x) { return x.row === row; }) : { showOn: '', headline: '', product: '', url: '', active: true };
+    var h = '<h2>' + (row ? 'Edit Amazon pick' : 'Add an Amazon pick') + '</h2><div class="grid2">' +
+      '<label>Show on</label><div><input type="text" id="aShow" value="' + esc(a.showOn) + '"><div class="help">A Day number (shows on that question\'s answer), or Knockout, Waiting, or Champion.</div></div>' +
+      '<label>Headline</label><input type="text" id="aHead" value="' + esc(a.headline) + '">' +
+      '<label>Product name</label><input type="text" id="aProd" value="' + esc(a.product) + '">' +
+      '<label>Amazon link</label><div><input type="text" id="aUrl" value="' + esc(a.url) + '"><div class="help">Paste a link from Amazon (SiteStripe Text link works best). Your tag is added automatically.</div></div>' +
+      '<label>Or search words</label><div><input type="text" id="aWords" placeholder="Example: beginner telescope"><div class="help">Leave the link empty and type words here to make an Amazon search link for you.</div></div>' +
+      '<label>Turned on</label><select id="aActive"><option value="yes"' + (a.active ? ' selected' : '') + '>Yes</option><option value="no"' + (!a.active ? ' selected' : '') + '>No</option></select>' +
+      '</div><div class="actions" style="justify-content:space-between">' +
+      (row ? '<button class="btn red" onclick="if(confirm(\'Delete this pick?\'))act(\'panelDeleteAd\',' + row + ')">Delete</button>' : '<span></span>') +
+      '<span><button class="btn light" onclick="closeModal()">Cancel</button> <button class="btn" onclick="saveAd(' + (row || 0) + ')">Save</button></span></div>';
+    openModal(h);
+  }
+  function saveAd(row) {
+    act('panelSaveAd', { row: row || null, showOn: $('aShow').value, headline: $('aHead').value, product: $('aProd').value,
+      url: $('aUrl').value, searchWords: $('aWords').value, active: $('aActive').value === 'yes' });
+  }
+
+  // ---------- cheat alerts ----------
+  function renderAlerts() {
+    var showAll = $('aFilter').value === 'all';
+    var list = D.alerts.filter(function (a) { return showAll || !a.reviewed; });
+    $('aTable').innerHTML = list.length ? '<tr><th>When</th><th>Alert</th><th>Player(s)</th><th>Details</th><th></th></tr>' +
+      list.map(function (a) {
+        var names = a.players.split(',').map(function (n) {
+          n = n.trim();
+          var p = D.players.find(function (x) { return x.name === n; });
+          return p ? '<a class="inline" href="#" onclick="openPlayer(\'' + p.id + '\');return false;">' + esc(n) + '</a>' : esc(n);
+        }).join(', ');
+        return '<tr class="' + (a.reviewed ? '' : 'new') + '"><td class="small muted">' + esc(a.time) + '</td><td><b>' + esc(a.type) + '</b></td><td>' + names +
+          '</td><td class="small">' + esc(a.details) + '</td><td>' +
+          (a.reviewed ? '<button class="btn light" onclick="act(\'panelMarkAlert\',' + a.row + ',false)">Mark new</button>'
+            : '<button class="btn" onclick="act(\'panelMarkAlert\',' + a.row + ',true)">Reviewed</button>') + '</td></tr>';
+      }).join('') : '<tr><td class="ok">No ' + (showAll ? '' : 'new ') + 'cheat alerts.</td></tr>';
+  }
+  function markAll() { if (confirm('Mark every alert as reviewed?')) act('panelMarkAllAlerts'); }
+
+  // ---------- settings ----------
+  function renderSettings() {
+    $('settingsForm').innerHTML = '<div class="grid2">' + D.settings.map(function (f, i) {
+      var input = f.type === 'yesno'
+        ? '<select id="set' + i + '"><option' + (/^y/i.test(f.value) ? ' selected' : '') + '>Yes</option><option' + (!/^y/i.test(f.value) ? ' selected' : '') + '>No</option></select>'
+        : '<input type="' + (f.type === 'number' ? 'number' : 'text') + '" id="set' + i + '" value="' + esc(f.value) + '">';
+      return '<label>' + esc(f.key) + '</label><div>' + input + '<div class="help">' + esc(f.help) + '</div></div>';
+    }).join('') + '</div>';
+  }
+  function saveSettings() {
+    var values = {};
+    D.settings.forEach(function (f, i) { values[f.key] = $('set' + i).value; });
+    act('panelSaveSettings', values);
+  }
+
+  // ---------- tools ----------
+  function reviveDay() {
+    var d = $('reviveDay').value;
+    if (!d) { toast('Type a day number first.', true); return; }
+    if (confirm('Bring back everyone who got Day ' + d + ' wrong?')) act('panelReviveDay', d);
+  }
+  function giveEveryone() { if (confirm('Give every player 1 bonus question?')) act('panelGiveEveryoneBonus'); }
+  function runChecks() { act('panelRunChecks'); }
+
+  // ---------- modal ----------
+  function openModal(h) { $('modal').innerHTML = h; $('overlay').style.display = 'flex'; }
+  function closeModal() { $('overlay').style.display = 'none'; }
+
+  load();
+</script>
+</body>
+</html>

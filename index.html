@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Holdout</title>
+<meta name="description" content="One trivia question a day. One wrong answer and you are out. Can you survive 30 days?">
+<meta property="og:title" content="Holdout">
+<meta property="og:description" content="One trivia question a day. One wrong answer and you are out. Can you survive 30 days?">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0f1626">
+<script src="config.js"></script>
+<style>
+  :root {
+    --bg: #0f1626;
+    --card: #182238;
+    --card2: #1f2b45;
+    --line: #2c3a5a;
+    --text: #eef2fa;
+    --muted: #9fb0cf;
+    --accent: #ffb547;
+    --good: #3ecf8e;
+    --bad: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.45;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; padding: 20px 16px 60px; }
+  header { text-align: center; padding: 18px 0 8px; }
+  h1 { margin: 0; font-size: 44px; letter-spacing: 6px; text-transform: uppercase; color: var(--accent); }
+  .tagline { color: var(--muted); margin: 6px 0 14px; }
+  .pills { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .pill { background: var(--card2); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; font-size: 14px; }
+  .pill b { color: var(--accent); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; margin-top: 16px; }
+  .card.invite { border: 2px solid var(--accent); background: #2a2414; }
+  h2 { margin: 0 0 12px; font-size: 20px; }
+  h3 { margin: 18px 0 8px; font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  label { display: block; font-size: 14px; color: var(--muted); margin: 12px 0 4px; }
+  input[type=text], input[type=password] {
+    width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--text); font-size: 16px;
+  }
+  .check { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; font-size: 15px; color: var(--text); }
+  .check input { width: 20px; height: 20px; margin-top: 2px; }
+  button { font: inherit; cursor: pointer; }
+  .btn {
+    width: 100%; margin-top: 16px; padding: 14px; border: 0; border-radius: 12px;
+    background: var(--accent); color: #1a1205; font-weight: 700; font-size: 17px;
+  }
+  .btn.ghost { background: transparent; color: var(--accent); border: 2px solid var(--accent); }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 6px; }
+  .tab { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); }
+  .tab.on { background: var(--card2); color: var(--text); border-color: var(--accent); }
+  .choice {
+    display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; margin-top: 10px;
+    padding: 14px; border-radius: 12px; border: 2px solid var(--line); background: var(--bg); color: var(--text); font-size: 17px;
+  }
+  .choice .letter {
+    flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--card2); font-weight: 700;
+  }
+  .choice.on { border-color: var(--accent); }
+  .choice.on .letter { background: var(--accent); color: #1a1205; }
+  .qtext { font-size: 21px; font-weight: 600; margin: 4px 0 6px; }
+  .small { font-size: 14px; color: var(--muted); }
+  .warn { color: var(--accent); font-size: 14px; margin-top: 12px; }
+  .status { font-size: 22px; font-weight: 700; margin: 4px 0 6px; }
+  .good { color: var(--good); }
+  .bad { color: var(--bad); }
+  .countdown { font-size: 30px; font-weight: 700; letter-spacing: 2px; color: var(--accent); margin: 6px 0; }
+  .timeleft { display: inline-block; background: var(--card2); border-radius: 999px; padding: 4px 12px; font-size: 14px; margin-bottom: 8px; }
+  .timeleft b { color: var(--accent); }
+  .msg { display: none; margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: #3a1f27; color: #ffd6d6; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { background: var(--card2); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 14px; }
+  .chip.done { border-color: var(--good); }
+  .chip small { color: var(--muted); }
+  .list { list-style: none; padding: 0; margin: 0; }
+  .list li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+  .list li span:last-child { color: var(--muted); text-align: right; }
+  .answer { font-size: 18px; font-weight: 700; color: var(--good); margin: 8px 0; }
+  .link { background: none; border: 0; color: var(--muted); text-decoration: underline; padding: 0; font-size: 14px; }
+  details { margin-top: 10px; }
+  summary { cursor: pointer; font-weight: 600; }
+  details p { color: var(--muted); font-size: 15px; }
+  ul.small li { margin-bottom: 4px; }
+  .center { text-align: center; }
+  .loading { text-align: center; color: var(--muted); padding: 30px 0; }
+  .invitebox { margin-top: 14px; padding: 14px; border-radius: 12px; background: var(--card2); border: 1px dashed var(--accent); }
+  .linkrow { display: flex; gap: 8px; margin-top: 8px; }
+  .linkrow input { flex: 1; font-size: 14px; padding: 10px; }
+  .linkrow button { flex: none; padding: 10px 14px; border: 0; border-radius: 10px; background: var(--accent); color: #1a1205; font-weight: 700; }
+  .bonuscount { font-size: 15px; margin-top: 6px; }
+  .bonuscount b { color: var(--accent); }
+  .ad { margin-top: 16px; padding: 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); }
+  .ad .adlabel { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  .ad .adhead { font-weight: 700; margin-top: 4px; }
+  .ad .adprod { color: var(--muted); font-size: 15px; }
+  .ad a.adbtn { display: inline-block; margin-top: 10px; padding: 9px 16px; border-radius: 10px; background: var(--card2);
+    border: 1px solid var(--accent); color: var(--accent); font-weight: 700; text-decoration: none; }
+  .ad .addisc { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .footer { text-align: center; font-size: 13px; color: var(--muted); margin-top: 24px; }
+  .progress { height: 8px; background: var(--bg); border-radius: 999px; overflow: hidden; margin: 10px 0 4px; }
+  .progress div { height: 100%; background: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1 id="gameName">Holdout</h1>
+    <div class="tagline" id="tagline"></div>
+    <div class="pills" id="pills"></div>
+  </header>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="card" id="main"><div class="loading">Loading...</div></div>
+
+  <div class="card" id="revealCard" style="display:none"></div>
+
+  <div class="card" id="boardCard">
+    <h2>Leaderboard</h2>
+    <div id="board"><div class="loading">Loading...</div></div>
+  </div>
+
+  <div class="card" id="hallCard" style="display:none">
+    <h2>Hall of Fame</h2>
+    <div id="hall"></div>
+  </div>
+
+  <div class="card">
+    <h2>How to play</h2>
+    <ul class="small">
+      <li>Your game starts the moment you join. Your Day 1 question is waiting right away.</li>
+      <li>A new question unlocks every 24 hours from the time you joined.</li>
+      <li>You have 24 hours to answer each one.</li>
+      <li>One wrong answer, or a skipped day, and you are out.</li>
+      <li>Survive every day to make the Hall of Fame.</li>
+      <li>Invite friends with your personal link. Every friend who joins earns you a bonus question (up to 2 a day).</li>
+      <li>Still in? A bonus lets you answer your next question right now instead of waiting.</li>
+      <li>Knocked out? A bonus puts you back in right where you left off.</li>
+    </ul>
+    <details>
+      <summary>Privacy and rules</summary>
+      <p>Players must be 13 or older.</p>
+      <p>We only store the display name you choose, a scrambled version of your PIN, when you joined, your answers and how long they took, and a random code for your browser that helps us spot cheating. We do not ask for your email or real name, and we never sell or share your information.</p>
+      <p>Playing more than one account, or making fake accounts to earn bonus questions, gets you removed.</p>
+      <p>Your display name appears on the public leaderboard, so do not use your full real name.</p>
+      <p>There are no prizes. Bragging rights only.</p>
+      <p>To have your player deleted, contact the game organizer.</p>
+      <p>Product picks link to Amazon. Clicking or buying never affects your game.</p>
+    </details>
+  </div>
+
+  <div class="footer" id="footerDisclosure">As an Amazon Associate I earn from qualifying purchases.</div>
+
+</div>
+
+<script>
+  var state = null;
+  var selected = null;
+  var timer = null;
+  var authMode = 'join';
+  var lastBoard = null;
+
+  // ---------- small helpers ----------
+  function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function store(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} window['_' + k] = v || ''; }
+  function read(k) { try { return localStorage.getItem(k) || window['_' + k] || ''; } catch (e) { return window['_' + k] || ''; } }
+  function getToken() { return read('holdout_token'); }
+  function setToken(t) { store('holdout_token', t); }
+  function clearToken() { store('holdout_token', ''); }
+
+  // Invite code from the link they arrived on (kept so it still counts if they join later)
+  (function () {
+    var r = '';
+    try { r = new URLSearchParams(window.location.search).get('ref') || ''; } catch (e) {}
+    if (/^P[a-f0-9]{10}$/.test(r)) store('holdout_ref', r);
+  })();
+  function getRef() { return read('holdout_ref'); }
+
+  // A random code for this browser so the game can notice one person running several accounts
+  function getDevice() {
+    var d = read('holdout_device');
+    if (!d) {
+      d = '';
+      var chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+      for (var i = 0; i < 20; i++) d += chars.charAt(Math.floor(Math.random() * chars.length));
+      store('holdout_device', d);
+    }
+    return d;
+  }
+
+  // Every request goes to the Apps Script link in config.js
+  function call(fn) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    var api = (window.HOLDOUT_CONFIG && window.HOLDOUT_CONFIG.API_URL) || '';
+    if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(api)) {
+      return Promise.reject(new Error('The game is not connected yet. Put your Apps Script link in config.js.'));
+    }
+    return fetch(api, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: fn, args: args })
+    }).then(function (res) {
+      if (!res.ok) throw new Error('The game could not be reached. Please try again.');
+      return res.json();
+    }).then(function (j) {
+      if (!j || !j.ok) throw new Error((j && j.error) || 'Something went wrong. Please try again.');
+      return j.data;
+    }, function (e) {
+      if (e && e.message && /could not be reached|went wrong|not connected/.test(e.message)) throw e;
+      throw new Error('The game could not be reached. Check your connection and try again.');
+    });
+  }
+  function showError(e) {
+    var text = (e && e.message) ? e.message : String(e);
+    text = text.replace(/^(Error|Exception):\s*/i, '');
+    var m = $('msg');
+    m.textContent = text;
+    m.style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  function clearError() { $('msg').style.display = 'none'; }
+
+  function fmtTime(sec) {
+    sec = Math.max(0, Math.floor(sec));
+    var h = Math.floor(sec / 3600); sec -= h * 3600;
+    var m = Math.floor(sec / 60); var s = sec - m * 60;
+    function p(n) { return (n < 10 ? '0' : '') + n; }
+    return p(h) + ':' + p(m) + ':' + p(s);
+  }
+  function startCountdown(seconds) {
+    if (timer) clearInterval(timer);
+    if (!seconds) return;
+    var left = seconds;
+    timer = setInterval(function () {
+      left--;
+      var el = $('countdown');
+      if (el) el.textContent = fmtTime(left);
+      if (left <= 0) { clearInterval(timer); setTimeout(loadAll, 3000); }
+    }, 1000);
+  }
+
+  function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+
+  // ---------- invite box ----------
+  function inviteBox(p, headline) {
+    if (!p.inviteUrl) return '';
+    return '<div class="invitebox">' +
+      '<b>' + headline + '</b>' +
+      '<div class="small">Every friend who joins with your link earns you 1 bonus question. You can use up to ' +
+        state.bonusLimit + ' a day.</div>' +
+      '<div class="linkrow"><input type="text" id="inviteLink" readonly value="' + esc(p.inviteUrl) + '" onclick="this.select()">' +
+      '<button id="copyBtn" onclick="copyInvite()">Copy</button></div>' +
+      '<div class="bonuscount">Bonus questions: <b>' + p.bonus + '</b> &middot; Used today: ' + p.bonusUsedToday + ' of ' + state.bonusLimit +
+      ' &middot; Friends invited: ' + p.friendsInvited + '</div>' +
+      '</div>';
+  }
+  function copyInvite() {
+    var input = $('inviteLink');
+    if (!input) return;
+    var text = input.value;
+    function done() { var b = $('copyBtn'); if (b) b.textContent = 'Copied!'; }
+    if (navigator.share) {
+      navigator.share({ title: state.gameName,
+        text: 'Play ' + state.gameName + ' with me: one trivia question a day, one wrong answer and you are out.',
+        url: text }).then(done).catch(function () { fallbackCopy(input, done); });
+      return;
+    }
+    fallbackCopy(input, done);
+  }
+  function fallbackCopy(input, done) {
+    var text = input.value;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { input.select(); try { document.execCommand('copy'); done(); } catch (e) {} });
+    } else {
+      input.select(); try { document.execCommand('copy'); done(); } catch (e) {}
+    }
+  }
+
+  // ---------- Amazon picks ----------
+  function adHtml(ad) {
+    if (!ad || !ad.url || !/^https:\/\/(www\.)?(amazon\.com|amzn\.to|a\.co)\//i.test(ad.url)) return '';
+    return '<div class="ad">' +
+      '<div class="adlabel">Amazon pick</div>' +
+      '<div class="adhead">' + esc(ad.headline) + '</div>' +
+      '<div class="adprod">' + esc(ad.product) + '</div>' +
+      '<a class="adbtn" href="' + esc(ad.url) + '" target="_blank" rel="sponsored nofollow noopener">See it on Amazon</a>' +
+      '<div class="addisc">' + esc(state.disclosure || 'As an Amazon Associate I earn from qualifying purchases.') + '</div>' +
+      '</div>';
+  }
+
+  // ---------- loading ----------
+  function loadAll() {
+    clearError();
+    call('getState', getToken(), getRef()).then(function (s) {
+      state = s;
+      if (getToken() && !s.player) clearToken();
+      renderHeader();
+      renderMain();
+      renderReveal();
+      $('footerDisclosure').style.display = s.disclosure ? 'block' : 'none';
+      startCountdown(s.countdown);
+    }).catch(showError);
+    loadBoard();
+  }
+  function loadBoard() {
+    call('getLeaderboard').then(renderBoard).catch(showError);
+  }
+
+  // ---------- header ----------
+  function renderHeader() {
+    $('gameName').textContent = state.gameName;
+    document.title = state.gameName;
+    $('tagline').textContent = state.tagline;
+    var p = state.player;
+    var mine = '';
+    if (p && p.status === 'Alive') mine = '<span class="pill">You: Day <b>' + p.day + '</b> of ' + state.length + '</span>';
+    $('pills').innerHTML = mine +
+      '<span class="pill">Survive <b>' + state.length + '</b> days</span>' +
+      '<span class="pill" id="alivePill" style="display:none"></span>';
+    if (lastBoard) renderBoard(lastBoard);
+  }
+
+  // ---------- main card ----------
+  function renderMain() {
+    var main = $('main');
+    var p = state.player;
+    main.className = 'card';
+
+    if (!p) { renderAuth(); return; }
+
+    var html = '<div class="small">Playing as <b>' + esc(p.name) + '</b>' +
+      (p.attempt > 1 ? ' &middot; Run #' + p.attempt : '') +
+      ' &middot; Best run: ' + plural(p.best, 'day') + ' &nbsp; ' +
+      '<button class="link" onclick="logout()">Log out</button></div>';
+
+    if (p.status === 'Alive') {
+      var pct = Math.round(100 * p.daysSurvived / state.length);
+      html += '<div class="progress"><div style="width:' + pct + '%"></div></div>' +
+        '<div class="small">' + p.daysSurvived + ' of ' + state.length + ' days survived</div><br>';
+
+      if (state.question) {
+        var q = state.question;
+        html += '<div class="timeleft">Time left to answer: <b id="countdown">' + fmtTime(state.countdown) + '</b></div>' +
+          '<div class="small">Day ' + q.day + ' of ' + state.length + ' &middot; ' +
+            (q.secondChance ? 'Second chance question' : esc(q.difficulty)) + '</div>' +
+          '<div class="qtext">' + esc(q.text) + '</div>';
+        ['A', 'B', 'C', 'D'].forEach(function (L) {
+          html += '<button class="choice" id="ch' + L + '" onclick="pick(\'' + L + '\')">' +
+            '<span class="letter">' + L + '</span><span>' + esc(q.choices[L]) + '</span></button>';
+        });
+        html += '<button class="btn" id="lockBtn" disabled onclick="lockIn()">Pick an answer</button>' +
+          '<div class="warn">One wrong answer and you are out. Choose carefully.</div>';
+      } else if (state.questionMissing) {
+        html += '<div class="status">Your next question is on its way</div>' +
+          '<p>Check back a little later.</p>';
+      } else {
+        html += '<div class="status good">You survived Day ' + p.daysSurvived + '!</div>' +
+          '<p>Your next question unlocks in:</p>' +
+          '<div class="countdown" id="countdown">' + fmtTime(state.countdown) + '</div>' +
+          '<p class="small">Once it unlocks, you have 24 hours to answer. Skipping a day counts as a wrong answer.</p>';
+        if (p.canUseBonus) {
+          html += '<button class="btn" id="bonusBtn" onclick="doBonus()">Use a bonus question: play Day ' +
+            (p.daysSurvived + 1) + ' now</button>' +
+            '<p class="small">It opens right away and must be answered before the countdown above runs out.</p>';
+        }
+        html += inviteBox(p, 'Do not want to wait? Invite a friend.');
+      }
+
+    } else if (p.status === 'Champion') {
+      html += '<div class="status good">You survived all ' + state.length + ' days!</div>' +
+        '<p>You are in the Hall of Fame. Want to see if you can do it again?</p>' +
+        '<button class="btn" id="runBtn" onclick="doNewRun()">Start a new run now</button>' +
+        inviteBox(p, 'Bring your friends into the game.');
+
+    } else { // Out
+      var why = p.outReason === 'Missed a day'
+        ? 'You let Day ' + p.outOnDay + ' go by without answering.'
+        : 'Your answer on Day ' + p.outOnDay + ' was wrong.';
+      html += '<div class="status bad">You are out</div>' +
+        '<p>' + esc(why) + ' You survived ' + plural(p.daysSurvived, 'day') + '.</p>';
+      if (p.canUseBonus) {
+        html += '<button class="btn" id="bonusBtn" onclick="doBonus()">Use a bonus question: get back in at Day ' +
+          p.outOnDay + '</button>' +
+          '<p class="small">You keep your ' + plural(p.daysSurvived, 'day') + ' and get a new question for Day ' + p.outOnDay +
+          ' with a fresh 24 hours to answer it.</p>';
+      } else if (p.bonus > 0) {
+        html += '<p>You have used your ' + state.bonusLimit + ' bonus questions for today. Come back tomorrow to use another one.</p>';
+      } else {
+        html += '<p><b>Get back in right where you left off:</b> invite a friend. As soon as they join with your link, you get another question.</p>';
+      }
+      html += inviteBox(p, 'Your invite link');
+    }
+
+    if (state.ads && state.ads.slot) html += adHtml(state.ads.slot);
+    main.innerHTML = html;
+    selected = null;
+  }
+
+  function renderAuth() {
+    var invited = state.referrerName && getRef()
+      ? '<p style="margin-top:4px"><b>' + esc(state.referrerName) + '</b> invited you to play!</p>' : '';
+    var joinForm = invited +
+      '<p style="margin-top:4px">Your game starts the moment you join. Your Day 1 question is waiting.</p>' +
+      '<label for="jName">Display name (shown on the leaderboard)</label>' +
+      '<input type="text" id="jName" maxlength="20" autocomplete="nickname" placeholder="Example: TriviaTom">' +
+      '<label for="jPin">Pick a PIN (4 to 6 numbers)</label>' +
+      '<input type="password" id="jPin" inputmode="numeric" maxlength="6" autocomplete="new-password">' +
+      '<div class="small">Remember your name and PIN. You will need them to play on another phone or computer.</div>' +
+      '<label class="check"><input type="checkbox" id="j13"> <span>I am 13 years old or older.</span></label>' +
+      '<button class="btn" id="joinBtn" onclick="doJoin()">Join and start Day 1</button>';
+    var loginForm =
+      '<label for="lName">Display name</label>' +
+      '<input type="text" id="lName" maxlength="20" autocomplete="username">' +
+      '<label for="lPin">PIN</label>' +
+      '<input type="password" id="lPin" inputmode="numeric" maxlength="6" autocomplete="current-password">' +
+      '<button class="btn" id="loginBtn" onclick="doLogin()">Log in</button>';
+
+    $('main').innerHTML =
+      '<div class="tabs">' +
+        '<button class="tab' + (authMode === 'join' ? ' on' : '') + '" onclick="setMode(\'join\')">Join</button>' +
+        '<button class="tab' + (authMode === 'login' ? ' on' : '') + '" onclick="setMode(\'login\')">Log in</button>' +
+      '</div>' +
+      (authMode === 'join' ? joinForm : loginForm);
+  }
+
+  function setMode(m) { authMode = m; clearError(); renderAuth(); }
+
+  // ---------- actions ----------
+  function doJoin() {
+    clearError();
+    var btn = $('joinBtn'); btn.disabled = true; btn.textContent = 'Joining...';
+    call('join', $('jName').value, $('jPin').value, $('j13').checked, getRef(), getDevice()).then(function (r) {
+      setToken(r.token);
+      store('holdout_ref', '');
+      try { history.replaceState(null, '', window.location.pathname); } catch (e) {}
+      loadAll();
+    }).catch(function (e) {
+      btn.disabled = false; btn.textContent = 'Join and start Day 1'; showError(e);
+    });
+  }
+  function doLogin() {
+    clearError();
+    var btn = $('loginBtn'); btn.disabled = true; btn.textContent = 'Logging in...';
+    call('login', $('lName').value, $('lPin').value, getDevice()).then(function (r) {
+      setToken(r.token);
+      loadAll();
+    }).catch(function (e) {
+      btn.disabled = false; btn.textContent = 'Log in'; showError(e);
+    });
+  }
+  function doBonus() {
+    clearError();
+    var btn = $('bonusBtn'); if (btn) { btn.disabled = true; btn.textContent = 'Opening your question...'; }
+    call('useBonus', getToken()).then(loadAll).catch(function (e) { showError(e); loadAll(); });
+  }
+  function doNewRun() {
+    clearError();
+    var btn = $('runBtn'); if (btn) { btn.disabled = true; btn.textContent = 'Starting...'; }
+    call('newRun', getToken()).then(loadAll).catch(function (e) { showError(e); loadAll(); });
+  }
+  function logout() { clearToken(); authMode = 'login'; loadAll(); }
+
+  function pick(L) {
+    selected = L;
+    ['A', 'B', 'C', 'D'].forEach(function (x) { $('ch' + x).classList.toggle('on', x === L); });
+    var b = $('lockBtn'); b.disabled = false; b.textContent = 'Lock in ' + L;
+  }
+  function lockIn() {
+    if (!selected) return;
+    clearError();
+    var b = $('lockBtn'); b.disabled = true; b.textContent = 'Checking...';
+    document.querySelectorAll('.choice').forEach(function (c) { c.disabled = true; });
+    if (timer) clearInterval(timer);
+    call('submitAnswer', getToken(), selected).then(function (r) {
+      var main = $('main');
+      if (r.result === 'correct' && r.champion) {
+        main.innerHTML = '<div class="center"><div class="status good">You did it!</div>' +
+          '<p>You survived all ' + state.length + ' days. Welcome to the Hall of Fame!</p></div>';
+      } else if (r.result === 'correct') {
+        main.innerHTML = '<div class="center"><div class="status good">Correct!</div>' +
+          '<p>You survived Day ' + r.day + '. Your next question unlocks in:</p>' +
+          '<div class="countdown" id="countdown">' + fmtTime(r.secondsToNext) + '</div>' +
+          '<p class="small">Keep the answer to yourself. Want to keep going now? Invite a friend for a bonus question.</p></div>';
+        startCountdown(r.secondsToNext);
+      } else if (r.result === 'wrong') {
+        main.innerHTML = '<div class="center"><div class="status bad">Not this time</div>' +
+          '<p>That answer was wrong, so you are out.</p>' +
+          '<p class="small">Invite a friend to get back in right where you left off.</p></div>';
+      } else {
+        main.innerHTML = '<div class="center"><div class="status bad">Time ran out</div>' +
+          '<p>Day ' + r.outOnDay + ' went by without an answer, so you are out.</p></div>';
+      }
+      if (r.disclosure) state.disclosure = r.disclosure;
+      if (r.ad) main.innerHTML += adHtml(r.ad);
+      setTimeout(loadAll, r.ad ? 9000 : 6000);
+      loadBoard();
+    }).catch(function (e) {
+      showError(e);
+      loadAll();
+    });
+  }
+
+  // ---------- previous answer ----------
+  function renderReveal() {
+    var card = $('revealCard');
+    var r = state.reveal;
+    if (!r) { card.style.display = 'none'; return; }
+    var pct = r.answered ? Math.round(100 * r.correct / r.answered) : 0;
+    card.style.display = 'block';
+    card.innerHTML = '<h2>Your last question</h2>' +
+      '<div>' + esc(r.text) + '</div>' +
+      '<div class="answer">' + esc(r.correctLetter) + '. ' + esc(r.correctText) + '</div>' +
+      (r.funFact ? '<div class="small">' + esc(r.funFact) + '</div>' : '') +
+      (r.answered ? '<p class="small">' + r.correct + ' of ' + r.answered + ' players have gotten this one right (' + pct + '%).</p>' : '') +
+      (state.ads && state.ads.reveal ? adHtml(state.ads.reveal) : '');
+  }
+
+  // ---------- leaderboard ----------
+  function renderBoard(b) {
+    lastBoard = b;
+    var pill = $('alivePill');
+    if (pill && b.total) {
+      pill.style.display = 'inline-block';
+      pill.innerHTML = '<b>' + b.alive.length + '</b> of ' + b.total + ' still standing';
+    }
+    var html = '<h3>Still standing (' + b.alive.length + ')</h3>';
+    if (b.alive.length) {
+      html += '<ul class="list">' + b.alive.map(function (p) {
+        return '<li><span>' + (p.answeredToday ? '&#10003; ' : '') + esc(p.name) + '</span>' +
+          '<span>' + p.survived + ' of ' + b.length + ' days</span></li>';
+      }).join('') + '</ul>' +
+        '<p class="small">&#10003; means they already answered their current question.</p>';
+    } else {
+      html += '<p class="small">Nobody yet. Be the first to join!</p>';
+    }
+    if (b.out.length) {
+      html += '<h3>Knocked out (' + b.out.length + ')</h3><ul class="list">' +
+        b.out.map(function (p) {
+          return '<li><span>' + esc(p.name) + '</span><span>Out on Day ' + p.outOnDay +
+            (p.reason === 'Missed a day' ? ' (missed)' : '') + ' &middot; best ' + p.best + '</span></li>';
+        }).join('') + '</ul>';
+    }
+    if (b.recruiters && b.recruiters.length) {
+      html += '<h3>Top recruiters</h3><ul class="list">' + b.recruiters.map(function (r) {
+        return '<li><span>' + esc(r.name) + '</span><span>' + plural(r.friends, 'friend') + ' invited</span></li>';
+      }).join('') + '</ul>';
+    }
+    $('board').innerHTML = html;
+
+    if (b.hall && b.hall.length) {
+      $('hallCard').style.display = 'block';
+      $('hall').innerHTML = '<ul class="list">' + b.hall.map(function (h) {
+        return '<li><span>&#9733; ' + esc(h.name) + (h.attempt > 1 ? ' (run #' + h.attempt + ')' : '') + '</span>' +
+          '<span>' + esc(h.date) + '</span></li>';
+      }).join('') + '</ul>';
+    }
+  }
+
+  loadAll();
+</script>
+</body>
+</html>
