@@ -77,9 +77,17 @@ function panelGetData() {
   const ansSh = ss.getSheetByName(TAB.ANSWERS);
   let answersToday = 0, correctToday = 0, guestTries = 0, guestToday = 0;
   const daysByPlayer = {};
+  const qStats = {};
   if (ansSh && ansSh.getLastRow() > 1) {
     ansSh.getRange(2, 1, ansSh.getLastRow() - 1, ANSWER_HEADERS.length).getValues().forEach(r => {
       const d = r[0] instanceof Date ? Utilities.formatDate(r[0], s.tz, 'yyyy-MM-dd') : '';
+      const qid = String(r[5]).trim();
+      if (qid) {
+        const st = qStats[qid] = qStats[qid] || { answered: 0, correct: 0, knockouts: 0 };
+        st.answered++;
+        if (r[7] === 'Yes') st.correct++;
+        else if (r[1] !== 'GUEST') st.knockouts++;
+      }
       if (r[1] === 'GUEST') { guestTries++; if (d === today) guestToday++; return; }
       if (d === today) { answersToday++; if (r[7] === 'Yes') correctToday++; }
       if (r[1]) (daysByPlayer[r[1]] = daysByPlayer[r[1]] || {})[d] = true;
@@ -87,8 +95,46 @@ function panelGetData() {
   }
   const playDays = Object.keys(daysByPlayer).map(k => Object.keys(daysByPlayer[k]).length);
 
-  // ---- questions ----
+  // ---- questions, with how players are doing on each ----
   const questions = allQuestionsForPanel_();
+  const MIN_ANSWERS = 8;
+  const levelAvg = {};
+  ['Easy', 'Medium', 'Hard', 'Very Hard'].forEach(t => {
+    let a = 0, c = 0;
+    questions.forEach(q => { const st = qStats[q.id]; if (q.difficulty === t && st) { a += st.answered; c += st.correct; } });
+    levelAvg[t] = a ? Math.round(100 * c / a) : null;
+  });
+  questions.forEach(q => {
+    const st = qStats[q.id] || { answered: 0, correct: 0, knockouts: 0 };
+    q.answered = st.answered;
+    q.knockouts = st.knockouts;
+    q.pct = st.answered ? Math.round(100 * st.correct / st.answered) : null;
+    const avg = levelAvg[q.difficulty];
+    q.suspicious = q.active && st.answered >= MIN_ANSWERS && avg !== null &&
+      (q.pct < avg - 30 || (q.difficulty === 'Easy' && q.pct < 40));
+  });
+
+  // ---- question reports ----
+  const repSh = ss.getSheetByName(TAB.REPORTS);
+  const reportsById = {};
+  if (repSh && repSh.getLastRow() > 1) {
+    repSh.getRange(2, 1, repSh.getLastRow() - 1, REPORT_HEADERS.length).getValues().forEach(r => {
+      if (String(r[6]) !== 'Open' || !r[1]) return;
+      const g = reportsById[r[1]] = reportsById[r[1]] || { id: String(r[1]), count: 0, items: [] };
+      g.count++;
+      g.items.push({ time: fmt(r[0]), name: String(r[3]), reason: String(r[4]), note: String(r[5]) });
+    });
+  }
+  const reported = Object.keys(reportsById).map(k => {
+    const g = reportsById[k];
+    const q = questions.find(x => x.id === k);
+    g.question = q ? q.question : '(question not found)';
+    g.answer = q ? q.correct + '. ' + (q[q.correct] || '') : '';
+    g.row = q ? q.row : 0;
+    g.active = q ? q.active : false;
+    g.knockouts = q ? q.knockouts : 0;
+    return g;
+  }).sort((a, b) => b.count - a.count);
   const levelCounts = {};
   ['Easy', 'Medium', 'Hard', 'Very Hard'].forEach(t => {
     levelCounts[t] = questions.filter(q => q.active && q.difficulty === t).length;
@@ -151,9 +197,13 @@ function panelGetData() {
       shares: Number(PropertiesService.getScriptProperties().getProperty('SHARES_TOTAL')) || 0
     },
     levelCounts: levelCounts,
+    levelAvg: levelAvg,
+    reported: reported,
     players: players,
     questions: questions,
-    problems: findProblems_(questions, ads, s),
+    problems: (reported.length ? [reported.length + ' question(s) have open player reports. See the Questions tab.'] : [])
+      .concat(questions.filter(q => q.suspicious).map(q => q.id + ' is answered correctly by only ' + q.pct + '% of players, far below others at its level (' + levelAvg[q.difficulty] + '%). Check the wording and answer key.'))
+      .concat(findProblems_(questions, ads, s)),
     ads: ads,
     alerts: alerts.slice(0, 300),
     settings: settingsList
@@ -304,6 +354,18 @@ function panelDeleteQuestion(row) {
   if (row < 2) throw new Error('Cannot delete that row.');
   ss_().getSheetByName(TAB.QUESTIONS).deleteRow(row);
   return 'Question deleted.';
+}
+
+function panelResolveReports(id) {
+  requireOwner_();
+  const sh = ss_().getSheetByName(TAB.REPORTS);
+  if (!sh || sh.getLastRow() < 2) return 'No reports.';
+  const n = sh.getLastRow() - 1;
+  const rows = sh.getRange(2, 1, n, REPORT_HEADERS.length).getValues();
+  let count = 0;
+  rows.forEach(r => { if (String(r[1]) === String(id) && r[6] === 'Open') { r[6] = 'Reviewed'; count++; } });
+  if (count) sh.getRange(2, 1, n, REPORT_HEADERS.length).setValues(rows);
+  return count + ' report(s) for ' + id + ' marked reviewed.';
 }
 
 function panelReviveQuestion(id) {

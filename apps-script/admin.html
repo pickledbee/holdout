@@ -60,6 +60,9 @@
   .linkbox { width: 100%; }
   a.inline { color: #1f4fd1; }
   .new { border-left: 4px solid #e5484d; }
+  .rep { border: 1px solid #f3c2c2; background: #fff7f7; border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+  .rep ul { margin: 6px 0; padding-left: 18px; }
+  tr.sus td { background: #fff4e5; }
 </style>
 </head>
 <body>
@@ -127,6 +130,7 @@
 
 <!-- QUESTIONS -->
 <div class="page" id="p-questions">
+  <div class="card" id="qReported"></div>
   <div class="card" id="qProblems"></div>
   <div class="card">
     <div class="row" style="margin-bottom:10px">
@@ -252,7 +256,8 @@
       $('apiLink').value = d.apiUrl || 'Not found yet: in Apps Script click Deploy > Manage deployments and copy the Web app URL.';
       $('sheetLink').href = d.sheetUrl;
       $('qLen').textContent = d.length;
-      var pb = $('probBadge'); pb.style.display = d.problems.length ? 'inline' : 'none'; pb.textContent = d.problems.length;
+      var qIssues = (d.reported || []).length + d.questions.filter(function (q) { return q.suspicious; }).length;
+      var pb = $('probBadge'); pb.style.display = qIssues ? 'inline' : 'none'; pb.textContent = qIssues;
       var ab = $('alertBadge'); ab.style.display = d.stats.newAlerts ? 'inline' : 'none'; ab.textContent = d.stats.newAlerts;
       renderDash(); renderPlayers(); renderQuestions(); renderAds(); renderAlerts(); renderSettings();
     }).catch(function (e) { $('updated').textContent = ''; toast(e, true); });
@@ -375,7 +380,26 @@
   function pConfirm(action, msg) { if (confirm(msg)) pAct(action); }
 
   // ---------- questions ----------
+  function renderReported() {
+    var list = D.reported || [];
+    if (!list.length) { $('qReported').innerHTML = '<h2>Player reports</h2><span class="ok">No open reports.</span>'; return; }
+    $('qReported').innerHTML = '<h2>Player reports (' + list.length + ')</h2>' + list.map(function (g) {
+      return '<div class="rep"><b>' + esc(g.id) + '</b> &middot; ' + g.count + ' report' + (g.count === 1 ? '' : 's') +
+        ' &middot; knocked out ' + g.knockouts + ' player' + (g.knockouts === 1 ? '' : 's') + (g.active ? '' : ' &middot; <i>turned off</i>') +
+        '<div style="margin-top:6px">' + esc(g.question) + '</div><div class="muted">Answer key: ' + esc(g.answer) + '</div><ul>' +
+        g.items.map(function (it) {
+          return '<li><b>' + esc(it.reason) + '</b>' + (it.note ? ': ' + esc(it.note) : '') + ' <span class="muted small">(' + esc(it.name) + ', ' + esc(it.time) + ')</span></li>';
+        }).join('') + '</ul><div class="actions">' +
+        '<button class="btn green" onclick="if(confirm(\'Bring back everyone ' + esc(g.id) + ' knocked out? It will count as correct for them.\'))act(\'panelReviveQuestion\',\'' + esc(g.id) + '\')">Bring back everyone it knocked out</button>' +
+        (g.row && g.active ? '<button class="btn light" onclick="act(\'panelToggleQuestion\',' + g.row + ',false)">Turn it off</button>' : '') +
+        (g.row ? '<button class="btn light" onclick="editQuestion(' + g.row + ')">Edit it</button>' : '') +
+        '<button class="btn light" onclick="act(\'panelResolveReports\',\'' + esc(g.id) + '\')">Mark reviewed (it\'s fine)</button>' +
+        '</div></div>';
+    }).join('');
+  }
+
   function renderQuestions() {
+    renderReported();
     $('qProblems').innerHTML = '<h2>Question check</h2>' + (D.problems.length
       ? '<ul class="problems">' + D.problems.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>'
       : '<span class="ok">Every level has plenty of questions and every answer key is valid.</span>');
@@ -386,12 +410,14 @@
       if (lvl && x.difficulty !== lvl) return false;
       return !q || (x.question + ' ' + x.id + ' ' + x.A + ' ' + x.B + ' ' + x.C + ' ' + x.D).toLowerCase().indexOf(q) >= 0;
     });
-    $('qTable').innerHTML = '<tr><th>On?</th><th>ID</th><th>Level</th><th>Question</th><th>Correct answer</th><th></th></tr>' +
+    $('qTable').innerHTML = '<tr><th>On?</th><th>ID</th><th>Level</th><th>Question</th><th>Correct answer</th><th>Right %</th><th></th></tr>' +
       list.map(function (x) {
-        return '<tr><td><input type="checkbox" ' + (x.active ? 'checked' : '') + ' onchange="act(\'panelToggleQuestion\',' + x.row + ',this.checked)"></td>' +
+        var pct = x.pct === null ? '<span class="muted small">no answers</span>'
+          : x.pct + '% <span class="muted small">of ' + x.answered + '</span>' + (x.suspicious ? ' <b style="color:#b42318">check</b>' : '');
+        return '<tr' + (x.suspicious ? ' class="sus"' : '') + '><td><input type="checkbox" ' + (x.active ? 'checked' : '') + ' onchange="act(\'panelToggleQuestion\',' + x.row + ',this.checked)"></td>' +
           '<td><b>' + esc(x.id) + '</b></td><td class="small">' + esc(x.difficulty) +
           '</td><td>' + esc(x.question) + '</td><td>' + esc(x.correct) + '. ' + esc(x[x.correct] || '?') +
-          '</td><td><button class="btn light" onclick="editQuestion(' + x.row + ')">Edit</button></td></tr>';
+          '</td><td class="small">' + pct + '</td><td><button class="btn light" onclick="editQuestion(' + x.row + ')">Edit</button></td></tr>';
       }).join('');
   }
   function editQuestion(row) {

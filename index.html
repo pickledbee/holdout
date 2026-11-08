@@ -109,6 +109,10 @@
   .sharebox pre { white-space: pre-wrap; font-family: inherit; font-size: 15px; margin: 0 0 4px; line-height: 1.35; }
   .sharebox .btn { margin-top: 8px; }
   .badge { font-size: 11px; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 7px; margin-left: 4px; white-space: nowrap; }
+  .reportbox { margin-top: 12px; }
+  .reportbox select, .reportbox input { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font-size: 15px; margin-top: 6px; }
+  .rank { font-size: 15px; color: var(--muted); margin-top: 6px; }
+  .rank b { color: var(--accent); }
   .progress { height: 8px; background: var(--bg); border-radius: 999px; overflow: hidden; margin: 10px 0 4px; }
   .progress div { height: 100%; background: var(--accent); }
 </style>
@@ -127,6 +131,8 @@
   <div class="card" id="main"><div class="loading">Loading...</div></div>
 
   <div class="card" id="revealCard" style="display:none"></div>
+
+  <div class="card" id="circleCard" style="display:none"></div>
 
   <div class="card" id="boardCard">
     <h2>Leaderboard</h2>
@@ -148,6 +154,7 @@
       <li>Busy day? You get 2 pause days per run. Missing a day uses one, and your question waits for you.</li>
       <li>Knocked out? Start a new run for free, or invite a friend: when they join with your link, you can continue from where you left off.</li>
       <li>Each answer is revealed after the next midnight, so no spoilers.</li>
+      <li>Think a question was unfair? Report it. If it was wrong, everyone it knocked out gets brought back.</li>
     </ul>
     <details>
       <summary>Privacy and rules</summary>
@@ -307,6 +314,52 @@
     document.body.removeChild(t);
   }
 
+  // ---------- rank ----------
+  function rankLine(p) {
+    if (!p.best || !p.totalPlayers || p.totalPlayers < 2) return '';
+    return '<div class="rank">Your best run of <b>' + p.best + '</b> ranks <b>#' + p.rank + '</b> of ' + p.totalPlayers + ' players.</div>';
+  }
+
+  // ---------- report a question ----------
+  function reportLink(qid) {
+    if (!qid) return '';
+    if (read('holdout_reported_' + qid)) return '<p class="small">You reported this question. Thanks!</p>';
+    return '<div id="rep_' + qid + '"><p class="small"><button class="link" onclick="openReport(\'' + qid + '\')">Think this question was unfair? Report it</button></p></div>';
+  }
+  function openReport(qid) {
+    $('rep_' + qid).innerHTML = '<div class="reportbox">' +
+      '<select id="repReason_' + qid + '"><option value="">What is wrong with it?</option>' +
+      '<option value="wrong">The answer key is wrong</option><option value="two">More than one answer is right</option>' +
+      '<option value="confusing">The question is confusing</option></select>' +
+      '<input type="text" id="repNote_' + qid + '" maxlength="300" placeholder="Optional: tell us why">' +
+      '<button class="btn ghost" onclick="sendReport(\'' + qid + '\')">Send report</button></div>';
+  }
+  function sendReport(qid) {
+    var reason = $('repReason_' + qid).value;
+    if (!reason) { showError(new Error('Pick what is wrong with the question.')); return; }
+    call('reportQuestion', getToken(), qid, reason, $('repNote_' + qid).value).then(function (r) {
+      store('holdout_reported_' + qid, '1');
+      $('rep_' + qid).innerHTML = '<p class="small">' + esc(r.message) + '</p>';
+    }).catch(showError);
+  }
+
+  // ---------- your circle ----------
+  function renderCircle() {
+    var card = $('circleCard'), p = state.player;
+    if (!p) { card.style.display = 'none'; return; }
+    var c = state.circle || [];
+    card.style.display = 'block';
+    if (!c.length) {
+      card.innerHTML = '<h2>Your circle</h2><p class="small">Friends you invite, and whoever invited you, show up here so you can keep an eye on each other.</p>';
+      return;
+    }
+    card.innerHTML = '<h2>Your circle</h2><ul class="list">' + c.map(function (f) {
+      var st = f.status === 'Alive' ? f.survived + ' of ' + state.length + (f.answeredToday ? ' &#10003;' : '')
+        : f.status === 'Champion' ? 'Champion!' : 'Out (best ' + f.best + ')';
+      return '<li><span>' + esc(f.name) + ' <span class="small">(' + esc(f.relation) + ')</span></span><span>' + st + '</span></li>';
+    }).join('') + '</ul><p class="small">&#10003; means they already answered today.</p>';
+  }
+
   // ---------- invite box ----------
   function inviteBox(p, headline, sub) {
     if (!p.inviteUrl) return '';
@@ -345,6 +398,7 @@
       renderHeader();
       renderMain();
       renderReveal();
+      renderCircle();
       $('footerDisclosure').style.display = s.disclosure ? 'block' : 'none';
       startCountdown(s.countdown);
     }).catch(showError);
@@ -408,13 +462,13 @@
         html += '<div class="status good">You\'re still standing!</div>' +
           '<p>Your next question unlocks at midnight, in:</p>' +
           '<div class="countdown cd">' + fmtTime(state.countdown) + '</div>' +
-          calendarLink() + shareBox('Challenge my friends') +
+          rankLine(p) + calendarLink() + shareBox('Challenge my friends') +
           inviteBox(p, 'Save up a comeback', 'If you ever get knocked out, a friend joining with your link lets you continue where you left off instead of starting over.');
       }
 
     } else if (p.status === 'Champion') {
       html += '<div class="status good">You got all ' + state.length + ' in a row!</div>' +
-        '<p>You are in the Hall of Fame. Want to see if you can do it again?</p>' +
+        '<p>You are in the Hall of Fame. Want to see if you can do it again?</p>' + rankLine(p) +
         shareBox('Share my win') +
         '<button class="btn" id="runBtn" onclick="doNewRun()">Start a new run</button>' +
         inviteBox(p, 'Bring your friends in', 'Each friend who joins with your link saves you a comeback for a future run.');
@@ -424,7 +478,8 @@
         : p.outReason === 'Removed by admin' ? 'This run was ended by the game organizer.'
         : 'Your answer on question ' + p.outOnDay + ' was wrong.';
       html += '<div class="status bad">Your run ended on question ' + p.outOnDay + '</div>' +
-        '<p>' + esc(why) + ' Your best is ' + p.best + ' of ' + state.length + '.</p>';
+        '<p>' + esc(why) + ' Your best is ' + p.best + ' of ' + state.length + '.</p>' + rankLine(p) +
+        (p.outReason === 'Wrong answer' ? reportLink(p.lastQuestionId) : '');
       if (p.canRestart) {
         html += '<button class="btn" id="runBtn" onclick="doNewRun()">Start a new run' +
           (p.restartIsInstant ? ' now' : ' (first question at midnight)') + '</button>';
@@ -630,6 +685,7 @@
       '<div class="answer">' + esc(r.correctLetter) + '. ' + esc(r.correctText) + '</div>' +
       (r.funFact ? '<div class="small">' + esc(r.funFact) + '</div>' : '') +
       (show ? '<p class="small">' + pct + '% of ' + r.answered + ' players got this one right.</p>' : '') +
+      reportLink(r.id) +
       (state.ads && state.ads.reveal ? adHtml(state.ads.reveal) : '');
   }
 
@@ -658,6 +714,11 @@
           return '<li><span>' + esc(p.name) + '</span><span>Out on question ' + p.outOnDay +
             (/^Missed/.test(p.reason) ? ' (missed days)' : '') + ' &middot; best ' + p.best + '</span></li>';
         }).join('') + '</ul>';
+    }
+    if (b.bestRuns && b.bestRuns.length) {
+      html += '<h3>Best runs ever</h3><ul class="list">' + b.bestRuns.map(function (r, i) {
+        return '<li><span>' + (i + 1) + '. ' + esc(r.name) + (r.status === 'Champion' ? ' &#9733;' : '') + '</span><span>' + r.best + ' of ' + b.length + '</span></li>';
+      }).join('') + '</ul>';
     }
     if (b.recruiters && b.recruiters.length) {
       html += '<h3>Top recruiters</h3><ul class="list">' + b.recruiters.map(function (r) {

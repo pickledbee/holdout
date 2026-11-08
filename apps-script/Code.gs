@@ -43,6 +43,7 @@ const TAB = {
   HALL: 'Hall of Fame',
   ALERTS: 'Cheat Alerts',
   ADS: 'Ads',
+  REPORTS: 'Question Reports',
   HOWTO: 'How It Works'
 };
 
@@ -105,6 +106,8 @@ const STARTER_ADS = [
   ['Champion', 'Gifts for the know-it-all in your life', 'Brain teaser puzzle sets', 'brain teaser puzzle set adults']
 ];
 
+const REPORT_HEADERS = ['Time', 'Question ID', 'Player ID', 'Display Name', 'Reason', 'Note', 'Status'];
+const REPORT_ALERT_AT = 2; // email an alert when a question gets this many open reports
 const ALERT_HEADERS = ['Time', 'Alert', 'Player(s)', 'Details', 'Reviewed?', 'Key'];
 
 // Cheat alert thresholds
@@ -130,12 +133,12 @@ const STARTER_QUESTIONS = [
   ["Q010", "Medium", "Who painted the Mona Lisa?", "Michelangelo", "Raphael", "Leonardo da Vinci", "Rembrandt", "C", "The Mona Lisa hangs in the Louvre museum in Paris.", "Yes"],
   ["Q011", "Medium", "What is the capital of Australia?", "Sydney", "Canberra", "Melbourne", "Perth", "B", "Canberra was built as a compromise because Sydney and Melbourne both wanted to be the capital.", "Yes"],
   ["Q012", "Medium", "How many strings does a standard violin have?", "4", "5", "6", "8", "A", "A violin's strings are tuned G, D, A, and E.", "Yes"],
-  ["Q013", "Medium", "What is the hardest naturally occurring mineral?", "Quartz", "Titanium", "Granite", "Diamond", "D", "Diamonds are made of pure carbon.", "Yes"],
+  ["Q013", "Medium", "Which of these is the hardest mineral?", "Topaz", "Quartz", "Talc", "Diamond", "D", "Diamonds are made of pure carbon.", "Yes"],
   ["Q014", "Medium", "Which organ in the human body produces insulin?", "Liver", "Pancreas", "Kidney", "Spleen", "B", "The pancreas sits tucked behind the stomach.", "Yes"],
   ["Q015", "Hard", "In what year did the Berlin Wall fall?", "1987", "1991", "1989", "1993", "C", "The wall came down on November 9, 1989.", "Yes"],
   ["Q016", "Hard", "What is the smallest prime number?", "0", "1", "2", "3", "C", "2 is also the only even prime number.", "Yes"],
   ["Q017", "Hard", "Which element has atomic number 1?", "Helium", "Hydrogen", "Lithium", "Oxygen", "B", "Hydrogen is the most abundant element in the universe.", "Yes"],
-  ["Q018", "Hard", "Which country has the most natural lakes?", "Russia", "United States", "Finland", "Canada", "D", "Canada is often said to have more lakes than the rest of the world combined.", "Yes"],
+  ["Q018", "Hard", "Which of these countries is known for having the most lakes?", "Russia", "United States", "Finland", "Canada", "D", "Canada is often said to have more lakes than the rest of the world combined.", "Yes"],
   ["Q019", "Hard", "What is the longest bone in the human body?", "Femur", "Tibia", "Humerus", "Pelvis", "A", "The femur, or thigh bone, is roughly a quarter of a person's height.", "Yes"],
   ["Q020", "Hard", "Which composer wrote The Four Seasons?", "Bach", "Handel", "Vivaldi", "Mozart", "C", "Vivaldi was also a priest, nicknamed the Red Priest because of his red hair.", "Yes"],
   ["Q021", "Hard", "Roughly how fast does light travel?", "18,600 miles per second", "186,000 miles per second", "1,860,000 miles per second", "18,600,000 miles per second", "B", "Light from the Sun takes about 8 minutes to reach Earth.", "Yes"],
@@ -144,7 +147,7 @@ const STARTER_QUESTIONS = [
   ["Q024", "Very Hard", "Which planet has the shortest day?", "Earth", "Saturn", "Jupiter", "Mercury", "C", "Jupiter spins all the way around in about 10 hours.", "Yes"],
   ["Q025", "Very Hard", "How many bones are in the typical adult human body?", "196", "206", "216", "226", "B", "Babies are born with around 270 bones, and many fuse together as they grow.", "Yes"],
   ["Q026", "Very Hard", "What is the national animal of Scotland?", "Lion", "Stag", "Eagle", "Unicorn", "D", "The unicorn has appeared on Scotland's royal coat of arms for centuries.", "Yes"],
-  ["Q027", "Very Hard", "Which country has the longest coastline in the world?", "Russia", "Australia", "Canada", "Indonesia", "C", "Canada's coastline touches three oceans: the Atlantic, Pacific, and Arctic.", "Yes"],
+  ["Q027", "Very Hard", "Which of these countries has the longest coastline?", "Russia", "Australia", "Canada", "Indonesia", "C", "Canada's coastline touches three oceans: the Atlantic, Pacific, and Arctic.", "Yes"],
   ["Q028", "Very Hard", "How many hearts does an octopus have?", "2", "3", "1", "4", "B", "Two hearts pump blood to the gills, and the third pumps it to the rest of the body.", "Yes"],
   ["Q029", "Very Hard", "What is the smallest country in the world by area?", "Monaco", "Vatican City", "San Marino", "Liechtenstein", "B", "Vatican City covers only about 0.17 square miles.", "Yes"],
   ["Q030", "Very Hard", "Counting both hot and cold deserts, what is the largest desert on Earth?", "Sahara", "Gobi", "Arabian", "Antarctic", "D", "A desert is defined by how little precipitation it gets, not by heat, so frozen Antarctica counts.", "Yes"],
@@ -155,7 +158,7 @@ const STARTER_QUESTIONS = [
   ["Q035", "Easy", "What is the capital of Canada?", "Toronto", "Montreal", "Vancouver", "Ottawa", "D", "Queen Victoria chose Ottawa as the capital in 1857.", "Yes"],
   ["Q036", "Very Hard", "How many official time zones does China use?", "1", "3", "4", "5", "A", "China stretches across about five geographic time zones but runs everything on Beijing Time.", "Yes"],
   ["Q037", "Easy", "What color do you get by mixing blue and yellow paint?", "Green", "Purple", "Orange", "Brown", "A", "Red, yellow, and blue are the traditional primary colors used in painting.", "Yes"],
-  ["Q038", "Easy", "How many continents are there?", "5", "6", "7", "8", "C", "Asia is the largest continent by both area and population.", "Yes"],
+  ["Q038", "Easy", "How many continents are usually taught in U.S. schools?", "5", "6", "7", "8", "C", "Some countries teach 5 or 6 continents by counting the Americas, or Europe and Asia, as one.", "Yes"],
   ["Q039", "Easy", "What is the largest planet in our solar system?", "Saturn", "Jupiter", "Neptune", "Earth", "B", "More than 1,000 Earths could fit inside Jupiter.", "Yes"],
   ["Q040", "Easy", "At what temperature does water freeze in degrees Fahrenheit?", "0", "100", "32", "212", "C", "At sea level, water boils at 212 degrees Fahrenheit.", "Yes"],
   ["Q041", "Easy", "Which animal is often called the King of the Jungle?", "Tiger", "Elephant", "Lion", "Gorilla", "C", "Despite the nickname, most lions live on grasslands and savannas, not in jungles.", "Yes"],
@@ -173,7 +176,7 @@ const STARTER_QUESTIONS = [
   ["Q053", "Easy", "In which country is the Great Wall?", "China", "Japan", "India", "Korea", "A", "Despite the popular myth, the Great Wall cannot be seen with the naked eye from the Moon.", "Yes"],
   ["Q054", "Easy", "What is the largest animal on Earth?", "African elephant", "Blue whale", "Giraffe", "Hippopotamus", "B", "A blue whale's heart is roughly the size of a small car.", "Yes"],
   ["Q055", "Easy", "Which instrument usually has six strings and is often strummed?", "Violin", "Harp", "Cello", "Guitar", "D", "Some guitars have 12 strings, set up in pairs.", "Yes"],
-  ["Q056", "Easy", "What shape has four equal sides and four right angles?", "Rectangle", "Square", "Rhombus", "Trapezoid", "B", "A square is technically also a rectangle and a rhombus.", "Yes"],
+  ["Q056", "Easy", "What do you call a shape with four equal sides and four right angles?", "Triangle", "Square", "Pentagon", "Octagon", "B", "A square also counts as a rectangle and a rhombus.", "Yes"],
   ["Q057", "Easy", "Which famous ship sank in 1912 after hitting an iceberg?", "Lusitania", "Mayflower", "Titanic", "Britannic", "C", "The Titanic was on its very first voyage, from Southampton, England, to New York.", "Yes"],
   ["Q058", "Easy", "What is the capital of the United States?", "New York City", "Washington, D.C.", "Philadelphia", "Boston", "B", "Both New York City and Philadelphia served as the capital before Washington, D.C.", "Yes"],
   ["Q059", "Easy", "How many legs does an insect have?", "6", "4", "8", "10", "A", "Every insect body has three main parts: the head, thorax, and abdomen.", "Yes"],
@@ -199,7 +202,7 @@ const STARTER_QUESTIONS = [
   ["Q079", "Medium", "Which painter famously cut off part of his own ear?", "Vincent van Gogh", "Pablo Picasso", "Claude Monet", "Salvador Dali", "A", "Van Gogh sold very few paintings during his lifetime.", "Yes"],
   ["Q080", "Medium", "What is the Sun mostly made of?", "Oxygen", "Helium", "Hydrogen", "Carbon", "C", "About three-quarters of the Sun's mass is hydrogen.", "Yes"],
   ["Q081", "Medium", "Which U.S. state is nicknamed the Sunshine State?", "California", "Arizona", "Hawaii", "Florida", "D", "Florida is also home to the Kennedy Space Center.", "Yes"],
-  ["Q082", "Medium", "What is the largest organ of the human body?", "Liver", "Brain", "Skin", "Lungs", "C", "An adult's skin weighs about 8 pounds.", "Yes"],
+  ["Q082", "Medium", "Which of these is the largest organ of the human body?", "Liver", "Brain", "Skin", "Lungs", "C", "An adult's skin weighs about 8 pounds.", "Yes"],
   ["Q083", "Medium", "Which scientist developed the theory of relativity?", "Isaac Newton", "Albert Einstein", "Galileo Galilei", "Nikola Tesla", "B", "Einstein's Nobel Prize in 1921 was for the photoelectric effect, not for relativity.", "Yes"],
   ["Q084", "Medium", "What is the capital of Italy?", "Rome", "Milan", "Venice", "Florence", "A", "Vatican City, the world's smallest country, sits inside Rome.", "Yes"],
   ["Q085", "Medium", "Which planet rotates on its side?", "Uranus", "Neptune", "Saturn", "Venus", "A", "Uranus is tilted about 98 degrees, so it spins almost on its side.", "Yes"],
@@ -209,7 +212,7 @@ const STARTER_QUESTIONS = [
   ["Q089", "Medium", "What is the currency of Japan?", "Yuan", "Won", "Yen", "Ringgit", "C", "The yuan is China's currency, and the won is South Korea's.", "Yes"],
   ["Q090", "Medium", "Which mountain is the tallest above sea level?", "K2", "Kilimanjaro", "Mount Everest", "Denali", "C", "Mount Everest sits on the border between Nepal and China.", "Yes"],
   ["Q091", "Medium", "How many degrees are in a right angle?", "45", "90", "180", "360", "B", "The angles inside any triangle always add up to 180 degrees.", "Yes"],
-  ["Q092", "Medium", "Kangaroos are native to which country?", "Australia", "New Zealand", "South Africa", "Argentina", "A", "A baby kangaroo is called a joey.", "Yes"],
+  ["Q092", "Medium", "Kangaroos are native to which of these countries?", "Australia", "New Zealand", "South Africa", "Argentina", "A", "A baby kangaroo is called a joey.", "Yes"],
   ["Q093", "Medium", "What color is a ruby?", "Blue", "Green", "Red", "Purple", "C", "Rubies and sapphires are the same mineral, called corundum.", "Yes"],
   ["Q094", "Medium", "Who painted the ceiling of the Sistine Chapel?", "Leonardo da Vinci", "Michelangelo", "Raphael", "Botticelli", "B", "Michelangelo spent about four years painting the ceiling, from 1508 to 1512.", "Yes"],
   ["Q095", "Medium", "In which city is the ancient Colosseum?", "Athens", "Rome", "Istanbul", "Paris", "B", "The Colosseum could hold around 50,000 spectators.", "Yes"],
@@ -232,7 +235,7 @@ const STARTER_QUESTIONS = [
   ["Q112", "Hard", "Which ancient wonder stood in Alexandria, Egypt?", "The Colossus", "The Lighthouse", "The Hanging Gardens", "The Temple of Artemis", "B", "The Lighthouse of Alexandria was one of the tallest structures in the world for centuries.", "Yes"],
   ["Q113", "Hard", "How many players from one baseball team are on the field while their team is on defense?", "8", "10", "11", "9", "D", "Those 9 players include the pitcher and the catcher.", "Yes"],
   ["Q114", "Hard", "Which planet takes the longest to spin around once?", "Venus", "Mercury", "Mars", "Jupiter", "A", "A single day on Venus is longer than its whole year.", "Yes"],
-  ["Q115", "Hard", "What is the largest organ inside the human body?", "Liver", "Heart", "Lungs", "Kidneys", "A", "The liver can grow back after part of it is removed.", "Yes"],
+  ["Q115", "Hard", "What is the heaviest organ inside the human body?", "Liver", "Heart", "Lungs", "Kidneys", "A", "The liver can grow back after part of it is removed.", "Yes"],
   ["Q116", "Hard", "In which country did the ancient Olympic Games begin?", "Italy", "Greece", "Egypt", "France", "B", "The ancient Games began in Olympia around 776 BC.", "Yes"],
   ["Q117", "Hard", "Who received the first U.S. patent for the telephone?", "Thomas Edison", "Nikola Tesla", "Alexander Graham Bell", "Samuel Morse", "C", "Bell received the telephone patent in 1876.", "Yes"],
   ["Q118", "Hard", "What is the main ingredient in traditional hummus?", "Lentils", "Chickpeas", "Black beans", "Green peas", "B", "Traditional hummus also includes tahini, a paste made from sesame seeds.", "Yes"],
@@ -261,8 +264,8 @@ const STARTER_QUESTIONS = [
   ["Q141", "Very Hard", "Which number, written in English, has its letters in alphabetical order?", "Fifty", "Seventy", "Eighty", "Forty", "D", "F, O, R, T, Y: each letter comes later in the alphabet than the one before it.", "Yes"],
   ["Q142", "Very Hard", "Who was the second person to walk on the Moon?", "Michael Collins", "Pete Conrad", "Buzz Aldrin", "Alan Shepard", "C", "Michael Collins stayed in orbit, flying the command module, while the others walked on the Moon.", "Yes"],
   ["Q143", "Very Hard", "What is the most common element in Earth's crust?", "Silicon", "Oxygen", "Iron", "Aluminum", "B", "Most of that oxygen is locked inside rocks and minerals.", "Yes"],
-  ["Q144", "Very Hard", "How many squares are on a standard chessboard?", "48", "56", "64", "72", "C", "Each player starts the game with 16 pieces.", "Yes"],
-  ["Q145", "Very Hard", "What is the longest-running show in Broadway history?", "Chicago", "The Lion King", "The Phantom of the Opera", "Cats", "C", "The Phantom of the Opera ran on Broadway for 35 years, from 1988 to 2023.", "Yes"],
+  ["Q144", "Very Hard", "How many light and dark squares make up a standard chessboard?", "48", "56", "64", "72", "C", "Count every size of square, from 1-by-1 up to the full 8-by-8 board, and there are 204.", "Yes"],
+  ["Q145", "Very Hard", "Which musical closed in 2023 as the longest-running show in Broadway history?", "Chicago", "The Lion King", "The Phantom of the Opera", "Cats", "C", "The Phantom of the Opera ran on Broadway for 35 years, from 1988 to 2023.", "Yes"],
   ["Q146", "Very Hard", "Which planet has the fastest winds in the solar system?", "Jupiter", "Saturn", "Neptune", "Uranus", "C", "Winds on Neptune can blow faster than 1,000 miles per hour.", "Yes"],
   ["Q147", "Very Hard", "Which bird can fly backward?", "Swift", "Kingfisher", "Sparrow", "Hummingbird", "D", "Some hummingbirds beat their wings more than 50 times per second.", "Yes"],
   ["Q148", "Very Hard", "What is the capital of Morocco?", "Casablanca", "Marrakesh", "Rabat", "Fez", "C", "Casablanca is Morocco's largest city.", "Yes"],
@@ -275,6 +278,22 @@ const STARTER_QUESTIONS = [
   ["Q155", "Very Hard", "What is the largest living bird?", "Emu", "Albatross", "Ostrich", "Cassowary", "C", "An ostrich egg is the largest egg laid by any living bird.", "Yes"],
   ["Q156", "Very Hard", "Which mathematician wrote the famous 'last theorem' that went unproven for more than 350 years?", "Leonhard Euler", "Pierre de Fermat", "Carl Friedrich Gauss", "Blaise Pascal", "B", "Andrew Wiles finally proved it in the mid-1990s.", "Yes"]
 ];
+
+// Version 8 fairness fixes: [question ID]: the old wording. If your sheet still has the old
+// wording for that ID, setup replaces the row with the fixed version from STARTER_QUESTIONS.
+// If you already edited that question yourself, it is left alone.
+const QUESTION_FIXES_V8 = {
+  "Q013": "What is the hardest naturally occurring mineral?",
+  "Q018": "Which country has the most natural lakes?",
+  "Q027": "Which country has the longest coastline in the world?",
+  "Q038": "How many continents are there?",
+  "Q056": "What shape has four equal sides and four right angles?",
+  "Q082": "What is the largest organ of the human body?",
+  "Q092": "Kangaroos are native to which country?",
+  "Q115": "What is the largest organ inside the human body?",
+  "Q144": "How many squares are on a standard chessboard?",
+  "Q145": "What is the longest-running show in Broadway history?"
+};
 
 /* =============================================================
  * WEB PAGE
@@ -309,7 +328,8 @@ const API_ACTIONS = {
   newRun: newRun,
   getGuestQuestion: getGuestQuestion,
   guestAnswer: guestAnswer,
-  logShare: logShare
+  logShare: logShare,
+  reportQuestion: reportQuestion
 };
 
 function doPost(e) {
@@ -376,6 +396,8 @@ function setup() {
   // ---- Upgrade data from earlier versions (safe to run again) ----
   const upgradeNotes = upgradeToV7_(ss);
   upgradeNotes.forEach(n => Logger.log(n));
+  const fixed = applyQuestionFixes_(ss);
+  if (fixed) Logger.log(fixed + ' question(s) updated with fairness fixes.');
 
   // ---- Questions (filled in if empty) ----
   const questions = getOrCreate_(ss, TAB.QUESTIONS);
@@ -424,6 +446,9 @@ function setup() {
     const yesNo = SpreadsheetApp.newDataValidation().requireValueInList(['Yes', 'No'], true).build();
     ads.getRange(2, 5, 499, 1).setDataValidation(yesNo);
   }
+  const reports = ensureTab_(ss, TAB.REPORTS, REPORT_HEADERS);
+  reports.setColumnWidth(1, 150);
+  reports.setColumnWidth(6, 420);
   const alerts = ensureTab_(ss, TAB.ALERTS, ALERT_HEADERS);
   alerts.setColumnWidth(1, 150);
   alerts.setColumnWidth(2, 230);
@@ -453,6 +478,13 @@ function setup() {
     ['   Knocked out? A bonus brings them back where they left off. After a wrong answer they get a different question'],
     ['      at the same level. Comebacks show a small badge on the leaderboard and Hall of Fame.'],
     ['   Players can use up to 2 bonus questions per day (Bonus Questions Per Day in Settings). Unused bonuses carry over.'],
+    [''],
+    ['QUESTION REPORTS'],
+    ['   Players can tap "Report this question" (wrong answer, more than one right answer, or confusing).'],
+    ['   Each report lands on the Question Reports tab. When a question gets 2 open reports, you get an email alert.'],
+    ['   In the Admin Panel (Questions tab) you can bring back everyone a question knocked out, turn it off, edit it,'],
+    ['      or mark the reports reviewed. The Admin Panel also flags questions that far fewer players get right than'],
+    ['      others at the same level, which usually means confusing wording or a wrong answer key.'],
     [''],
     ['QUESTIONS TAB'],
     ['   ID: a code like Q012. Never change an ID once players have seen the question (answer history uses it).'],
@@ -487,6 +519,7 @@ function setup() {
     ['   Answers: a log of every answer.'],
     ['   Hall of Fame: everyone who survived a full run.'],
     ['   Ads: your Amazon affiliate product picks.'],
+    ['   Question Reports: questions players think are wrong or unfair.'],
     ['   Cheat Alerts: anything suspicious, newest at the bottom.'],
     [''],
     ['HOLDOUT ADMIN MENU (at the top of this sheet, next to Help)'],
@@ -506,7 +539,7 @@ function setup() {
   const blank = ss.getSheetByName('Sheet1');
   if (blank && blank.getLastRow() === 0 && ss.getSheets().length > 1) ss.deleteSheet(blank);
 
-  [TAB.HOWTO, TAB.SETTINGS, TAB.QUESTIONS, TAB.PLAYERS, TAB.ANSWERS, TAB.HALL, TAB.ADS, TAB.ALERTS].forEach((name, i) => {
+  [TAB.HOWTO, TAB.SETTINGS, TAB.QUESTIONS, TAB.PLAYERS, TAB.ANSWERS, TAB.HALL, TAB.ADS, TAB.REPORTS, TAB.ALERTS].forEach((name, i) => {
     ss.setActiveSheet(ss.getSheetByName(name));
     ss.moveActiveSheet(i + 1);
   });
@@ -665,6 +698,28 @@ function getState(token, ref) {
 
     // The answer to your last question is revealed after the next midnight reset.
     if (row[P.LASTQ] && lastDate && lastDate < today) state.reveal = reveal_(row[P.LASTQ]);
+    state.player.lastQuestionId = String(row[P.LASTQ] || '');
+
+    // Rank by best run, and the player's circle (who invited them, and who they invited)
+    const bestOf = r => Math.max(Number(r[P.BEST]) || 0, Number(r[P.DAYS]) || 0);
+    const named = data.rows.filter(r => r[P.NAME]);
+    const myBest = bestOf(row);
+    state.player.rank = 1 + named.filter(r => bestOf(r) > myBest).length;
+    state.player.totalPlayers = named.length;
+    state.circle = named.filter(r => r[P.ID] !== row[P.ID] && (r[P.ID] === row[P.REFBY] || r[P.REFBY] === row[P.ID]))
+      .map(r => {
+        const c = r.slice();
+        checkMissed_(c, Date.now(), s);
+        return {
+          name: String(c[P.NAME]),
+          relation: c[P.ID] === row[P.REFBY] ? 'invited you' : 'you invited',
+          status: String(c[P.STATUS]),
+          survived: Number(c[P.DAYS]) || 0,
+          best: bestOf(c),
+          answeredToday: c[P.STATUS] === 'Alive' && normDate_(c[P.LASTDATE], s) === today
+        };
+      })
+      .sort((a, b) => b.survived - a.survived || a.name.localeCompare(b.name));
 
     if (changed) writePlayer_(data.sh, i, row);
   } finally {
@@ -725,7 +780,14 @@ function getLeaderboard() {
       .reverse().slice(0, 25);
   }
 
-  return { alive: alive, out: out, hall: hall, recruiters: recruiters, total: rows.length, length: s.length };
+  const bestRuns = rows.map(r => ({
+    name: String(r[P.NAME]),
+    best: Math.max(Number(r[P.BEST]) || 0, Number(r[P.DAYS]) || 0),
+    status: String(r[P.STATUS])
+  })).filter(r => r.best > 0)
+    .sort((a, b) => b.best - a.best || a.name.localeCompare(b.name)).slice(0, 10);
+
+  return { alive: alive, out: out, hall: hall, recruiters: recruiters, bestRuns: bestRuns, total: rows.length, length: s.length };
 }
 
 // A visitor can try one Easy question before signing up.
@@ -992,6 +1054,68 @@ function logShare(kind) {
     props.setProperty(key, String((Number(props.getProperty(key)) || 0) + 1));
   } catch (err) { Logger.log(err); }
   return { ok: true };
+}
+
+// A player flags a question they think is wrong, has two right answers, or is confusing.
+function reportQuestion(token, questionId, reason, note) {
+  const reasons = { wrong: 'The answer key is wrong', two: 'More than one answer is right', confusing: 'The question is confusing' };
+  if (!reasons[reason]) throw new Error('Pick a reason.');
+  note = String(note || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+  questionId = String(questionId || '').trim();
+  const s = settings_();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const data = readPlayers_();
+    const row = data.rows.find(r => r[P.TOKEN] && r[P.TOKEN] === token);
+    if (!row) throw new Error('Please log in again.');
+    const seen = seenList_(row[P.SEEN]);
+    if (seen.indexOf(questionId) < 0 && String(row[P.LASTQ]) !== questionId) {
+      throw new Error('You can only report a question you have answered.');
+    }
+    const q = question_(questionId);
+    if (!q) throw new Error('That question was not found.');
+    const sh = ss_().getSheetByName(TAB.REPORTS);
+    const existing = sh.getLastRow() > 1 ? sh.getRange(2, 1, sh.getLastRow() - 1, REPORT_HEADERS.length).getValues() : [];
+    if (existing.some(r => r[1] === questionId && r[2] === row[P.ID])) {
+      return { ok: true, message: 'You already reported this question. Thanks!' };
+    }
+    sh.appendRow([new Date(), questionId, row[P.ID], row[P.NAME], reasons[reason], note, 'Open']);
+    const open = existing.filter(r => r[1] === questionId && r[6] === 'Open').length + 1;
+    if (open >= REPORT_ALERT_AT) {
+      try {
+        alert_('Question reported', String(row[P.NAME]),
+          questionId + ' has ' + open + ' open reports. Latest: "' + reasons[reason] + '"' + (note ? ' (' + note + ')' : '') +
+          '. Question: ' + q.text + ' Answer key: ' + q.correct + '. ' + (q[q.correct] || '') +
+          '. Check it on the Questions tab of the Admin Panel. If it is unfair, use "Bring back everyone it knocked out."',
+          'report|' + questionId + '|' + (open >= 5 ? 5 : REPORT_ALERT_AT));
+      } catch (err) { Logger.log(err); }
+    }
+    return { ok: true, message: 'Thanks! The game organizer will review this question.' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Replaces questions that still have their old wording with the version 8 fairness fixes.
+function applyQuestionFixes_(ss) {
+  const sh = ss.getSheetByName(TAB.QUESTIONS);
+  if (!sh || sh.getLastRow() < 2) return 0;
+  const n = sh.getLastRow() - 1;
+  const rows = sh.getRange(2, 1, n, QUESTION_HEADERS.length).getValues();
+  const fresh = {};
+  STARTER_QUESTIONS.forEach(r => { fresh[r[0]] = r; });
+  let count = 0;
+  rows.forEach((r, i) => {
+    const id = String(r[0]).trim();
+    if (QUESTION_FIXES_V8[id] && String(r[2]).trim() === QUESTION_FIXES_V8[id] && fresh[id]) {
+      const f = fresh[id].slice();
+      f[9] = r[9] === '' ? 'Yes' : r[9]; // keep the on/off setting
+      sh.getRange(i + 2, 1, 1, QUESTION_HEADERS.length).setValues([f]);
+      count++;
+    }
+  });
+  return count;
 }
 
 /* ---------------- run helpers ---------------- */
