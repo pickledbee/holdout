@@ -282,7 +282,8 @@
     $('funnel').innerHTML = [
       [f.answered1, 'Answered a question'], [f.answered10, 'Answered 10+'], [f.saved, 'Picked a name and PIN'],
       [f.days2, 'Played on 2+ days'], [f.days7, 'Played on 7+ days'], [f.restarts, 'Play-agains'],
-      [f.comebacks, 'Comebacks used'], [f.shares, 'Results shared']
+      [f.comebacks, 'Comebacks used'], [f.shares, 'Results shared'],
+      [f.challengesMade, 'Challenge links made'], [f.challengesFinished, 'Challenges played by friends']
     ].map(function (i) {
       return '<div class="stat"><div class="n">' + esc(i[0]) + '</div><div class="l">' + esc(i[1]) + '</div></div>';
     }).join('');

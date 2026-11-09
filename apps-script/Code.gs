@@ -44,6 +44,8 @@ const TAB = {
   ALERTS: 'Cheat Alerts',
   ADS: 'Ads',
   REPORTS: 'Question Reports',
+  CHALLENGES: 'Challenges',
+  CHRESULTS: 'Challenge Results',
   HOWTO: 'How It Works'
 };
 
@@ -53,13 +55,18 @@ const PLAYER_HEADERS = ['Player ID', 'Display Name', 'PIN Hash', 'Login Token', 
   'Current Question', 'Last Question', 'Devices', 'Fast Answers', 'Question Shown At', 'Shown Question',
   'Last Day Played', 'Pause Days Used', 'Comebacks', 'Seen Questions', 'Last Restart Date',
   'Saved Account', 'Total Answers', 'Invite Credited', 'Best Today Date', 'Best Today', 'Daily Date', 'Daily Question',
-  'Daily Score', 'Daily Done', 'Daily Streak', 'Daily Last Played', 'Daily Best'];
+  'Daily Score', 'Daily Done', 'Daily Streak', 'Daily Last Played', 'Daily Best', 'Endless Challenge', 'Daily Challenge'];
+
+// "Beat my score" challenge links
+const CHALLENGE_HEADERS = ['Challenge ID', 'Created', 'From Player ID', 'From Name', 'Mode', 'Score', 'Daily Date', 'Reply To'];
+const CHRESULT_HEADERS = ['Finished', 'Challenge ID', 'From Player ID', 'From Name', 'Their Score', 'Player ID', 'Player Name',
+  'Score', 'Outcome', 'Sender Seen'];
 const P = { ID: 0, NAME: 1, HASH: 2, TOKEN: 3, JOINED: 4, AGE: 5, STATUS: 6, START: 7, ATTEMPT: 8,
   DAYS: 9, OUTDAY: 10, REASON: 11, BEST: 12, BONUS: 13, BONUSDATE: 14, BONUSUSED: 15,
   REFBY: 16, FRIENDS: 17, CURQ: 18, LASTQ: 19, DEVICES: 20, FAST: 21, SHOWNAT: 22, SHOWNQ: 23,
   LASTDATE: 24, PAUSES: 25, COMEBACKS: 26, SEEN: 27, RESTARTDATE: 28,
   SAVED: 29, TOTALANS: 30, REFCREDITED: 31, TODAYDATE: 32, TODAYBEST: 33, DAILYDATE: 34, DAILYIDX: 35,
-  DAILYSCORE: 36, DAILYDONE: 37, DAILYSTREAK: 38, DAILYLASTDATE: 39, DAILYBEST: 40 };
+  DAILYSCORE: 36, DAILYDONE: 37, DAILYSTREAK: 38, DAILYLASTDATE: 39, DAILYBEST: 40, ECH: 41, DCH: 42 };
 
 const QUESTION_HEADERS = ['ID', 'Difficulty', 'Question', 'A', 'B', 'C', 'D', 'Correct', 'Fun Fact', 'Active?', 'Source'];
 const ANSWER_HEADERS = ['Timestamp', 'Player ID', 'Display Name', 'Attempt', 'Day', 'Question Used', 'Choice', 'Correct?', 'Seconds To Answer', 'Mode'];
@@ -641,7 +648,10 @@ const API_ACTIONS = {
   startEndless: startEndless,
   answerEndless: answerEndless,
   getDaily: getDaily,
-  answerDaily: answerDaily
+  answerDaily: answerDaily,
+  getChallenge: getChallenge,
+  acceptChallenge: acceptChallenge,
+  createChallenge: createChallenge
 };
 
 function doPost(e) {
@@ -774,6 +784,8 @@ function setup() {
     const yesNo = SpreadsheetApp.newDataValidation().requireValueInList(['Yes', 'No'], true).build();
     ads.getRange(2, 5, 499, 1).setDataValidation(yesNo);
   }
+  ensureTab_(ss, TAB.CHALLENGES, CHALLENGE_HEADERS).setColumnWidth(4, 180);
+  ensureTab_(ss, TAB.CHRESULTS, CHRESULT_HEADERS).setColumnWidth(1, 150);
   const reports = ensureTab_(ss, TAB.REPORTS, REPORT_HEADERS);
   reports.setColumnWidth(1, 150);
   reports.setColumnWidth(6, 420);
@@ -804,6 +816,13 @@ function setup() {
     ['   Every player has a personal invite link. When a friend joins with it AND answers 3 questions, the inviter gets 1 comeback.'],
     ['   A comeback continues a run that just ended, with a different question at the same level.'],
     ['   Players can use up to Bonus Questions Per Day comebacks per day (Settings). Unused ones carry over.'],
+    [''],
+    ['CHALLENGE LINKS ("Beat my score")'],
+    ['   After a run or a Daily 10, players get a challenge link: "Rapid Panda 44 got 9 in a row. Can you beat it?"'],
+    ['   A friend who opens it gets a question right away. Their next full run (or that day\'s Daily 10) is their answer.'],
+    ['   When they finish, both players see who won, and the friend gets a "Challenge them back" button.'],
+    ['   Challenges tab = every link made. Challenge Results tab = every finished challenge. Challenge links also count'],
+    ['      as invite links, so they earn comebacks the same way.'],
     [''],
     ['QUESTION REPORTS'],
     ['   Players can tap "Report this question" (wrong answer, more than one right answer, or confusing).'],
@@ -1313,6 +1332,12 @@ function getState(token, ref) {
     if (changed) writePlayer_(data.sh, i, row);
     state.player = profile_(row, data, s);
     state.circle = circle_(row, data, s);
+    try {
+      state.activeChallenge = activeChallenge_(data, row, s);
+      const ch = challengeNews_(data, row);
+      state.challengeNews = ch.news;
+      state.challengeHistory = ch.history;
+    } catch (err) { Logger.log(err); }
   } finally {
     lock.releaseLock();
   }
@@ -1504,7 +1529,7 @@ function saveAccount(token, name, pin, confirmed13) {
 
 // First answer from a brand-new visitor: creates their player and starts their first run.
 // The website sends the question text too, so an answer is never graded against a different question.
-function startGuestEndless(deviceId, ref, questionId, choice, questionText) {
+function startGuestEndless(deviceId, ref, questionId, choice, questionText, challengeId) {
   const s = settings_();
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
@@ -1513,6 +1538,8 @@ function startGuestEndless(deviceId, ref, questionId, choice, questionText) {
     const i = createPlayer_(data, s, deviceId, ref);
     const row = data.rows[i];
     startRun_(row, s);
+    const ch = challengeId ? readChallenge_(challengeId) : null;
+    if (ch && ch.mode === 'Endless') row[P.ECH] = ch.id;
     const q = question_(String(questionId || ''));
     const same = q && q.active && (!questionText || normText_(q.text) === normText_(questionText));
     if (!same) {
@@ -1612,6 +1639,15 @@ function answerEndlessRow_(data, i, choice, s) {
     const sv = serveEndless_(row, s);
     if (sv.q) next = publicQuestion_(sv.q, n + 1, false);
   }
+  // "Beat my score" challenge
+  let challenge = null, challengePassed = null;
+  const ech = String(row[P.ECH] || '');
+  if (ech && ech.charAt(0) !== '~') {
+    const ch = readChallenge_(ech);
+    if (!ch) row[P.ECH] = '';
+    else if (!correct) { challenge = finishChallenge_(data, row, ch, n - 1); row[P.ECH] = ''; }
+    else if (n === ch.score + 1) challengePassed = { fromName: currentName_(data, ch), theirScore: ch.score };
+  }
   creditReferral_(data, row, s);
   writePlayer_(data.sh, i, row);
   formatDateCells_(data.sh, i);
@@ -1631,6 +1667,9 @@ function answerEndlessRow_(data, i, choice, s) {
     score: correct ? n : n - 1,
     hallOfFame: hall,
     next: next,
+    challenge: challenge,
+    challengePassed: challengePassed,
+    activeChallenge: activeChallenge_(data, row, s),
     player: profile_(row, data, s),
     ad: ad,
     disclosure: s.showAds ? AMAZON_DISCLOSURE : ''
@@ -1743,6 +1782,12 @@ function answerDaily(token, choice) {
       row[P.DAILYLASTDATE] = today;
       row[P.DAILYBEST] = Math.max(Number(row[P.DAILYBEST]) || 0, Number(row[P.DAILYSCORE]) || 0);
     }
+    let challenge = null;
+    if (finished && row[P.DCH]) {
+      const ch = readChallenge_(row[P.DCH]);
+      if (ch && ch.date === today) challenge = finishChallenge_(data, row, ch, Number(row[P.DAILYSCORE]) || 0);
+      row[P.DCH] = '';
+    }
     creditReferral_(data, row, s);
     writePlayer_(data.sh, i, row);
     formatDateCells_(data.sh, i);
@@ -1755,6 +1800,7 @@ function answerDaily(token, choice) {
     return {
       correct: correct, score: score, total: ids.length, done: finished, next: next,
       results: dailyResults_(score, idx + 1, finished),
+      challenge: challenge,
       streak: dailyStreakNow_(row, s),
       secondsToTomorrow: secondsToReset_(s),
       player: profile_(row, data, s)
@@ -1820,6 +1866,200 @@ function dailyStreakNow_(row, s) {
   return (last === todayKey_(s) || last === yesterdayKey_(s)) ? Number(row[P.DAILYSTREAK]) || 0 : 0;
 }
 
+/* ---------------- "Beat my score" challenges ---------------- */
+
+function readChallenge_(id) {
+  id = String(id || '').replace(/^~/, '').trim();
+  if (!/^C[a-f0-9]{10}$/.test(id)) return null;
+  const sh = ss_().getSheetByName(TAB.CHALLENGES);
+  if (!sh || sh.getLastRow() < 2) return null;
+  const rows = sh.getRange(2, 1, sh.getLastRow() - 1, CHALLENGE_HEADERS.length).getValues();
+  for (let k = rows.length - 1; k >= 0; k--) {
+    const r = rows[k];
+    if (String(r[0]) === id) {
+      return { id: id, fromId: String(r[2]), fromName: String(r[3]), mode: String(r[4]) === 'Daily' ? 'Daily' : 'Endless',
+        score: Number(r[5]) || 0, date: normDate_(r[6], settings_()), replyTo: String(r[7] || '') };
+    }
+  }
+  return null;
+}
+
+// Uses the challenger's current name, in case they picked their own name after making the link.
+function currentName_(data, ch) {
+  const r = data.rows.find(x => x[P.ID] === ch.fromId);
+  return r ? String(r[P.NAME]) : ch.fromName;
+}
+
+function challengePublic_(data, ch, s) {
+  const today = todayKey_(s);
+  return {
+    id: ch.id, fromName: currentName_(data, ch), mode: ch.mode, score: ch.score, date: ch.date,
+    expired: ch.mode === 'Daily' && ch.date !== today,
+    reply: !!ch.replyTo
+  };
+}
+
+function challengeResults_() {
+  const sh = ss_().getSheetByName(TAB.CHRESULTS);
+  if (!sh || sh.getLastRow() < 2) return { sh: sh, rows: [] };
+  return { sh: sh, rows: sh.getRange(2, 1, sh.getLastRow() - 1, CHRESULT_HEADERS.length).getValues() };
+}
+
+function resultObj_(r, data, meId) {
+  const mine = String(r[5]) === meId; // true = I took the challenge, false = I sent it
+  const fromRow = data.rows.find(x => x[P.ID] === String(r[2]));
+  const toRow = data.rows.find(x => x[P.ID] === String(r[5]));
+  const fromName = fromRow ? String(fromRow[P.NAME]) : String(r[3]);
+  const toName = toRow ? String(toRow[P.NAME]) : String(r[6]);
+  const outcome = String(r[8]); // from the taker's side: win / lose / tie
+  return {
+    challengeId: String(r[1]),
+    youTook: mine,
+    otherName: mine ? fromName : toName,
+    yourScore: mine ? Number(r[7]) || 0 : Number(r[4]) || 0,
+    theirScore: mine ? Number(r[4]) || 0 : Number(r[7]) || 0,
+    outcome: outcome === 'tie' ? 'tie' : ((outcome === 'win') === mine ? 'win' : 'lose'),
+    when: r[0] instanceof Date ? r[0].getTime() : 0
+  };
+}
+
+function finishChallenge_(data, row, ch, score) {
+  const outcome = score > ch.score ? 'win' : score < ch.score ? 'lose' : 'tie';
+  const res = challengeResults_();
+  const r = [new Date(), ch.id, ch.fromId, currentName_(data, ch), ch.score, row[P.ID], row[P.NAME], score, outcome, ''];
+  (res.sh || ss_().getSheetByName(TAB.CHRESULTS)).appendRow(r);
+  const out = resultObj_(r, data, String(row[P.ID]));
+  out.mode = ch.mode;
+  return out;
+}
+
+function activeChallenge_(data, row, s) {
+  const e = String(row[P.ECH] || ''), d = String(row[P.DCH] || '');
+  const out = {};
+  if (e) { const ch = readChallenge_(e); if (ch) { out.endless = challengePublic_(data, ch, s); out.endless.pending = e.charAt(0) === '~'; } }
+  if (d) { const ch = readChallenge_(d); if (ch && ch.date === todayKey_(s)) out.daily = challengePublic_(data, ch, s); }
+  return (out.endless || out.daily) ? out : null;
+}
+
+// Results of challenges this player sent that they haven't seen yet, plus their recent challenge history.
+function challengeNews_(data, row) {
+  const me = String(row[P.ID]);
+  const res = challengeResults_();
+  const news = [], history = [];
+  res.rows.forEach((r, k) => {
+    const sent = String(r[2]) === me, took = String(r[5]) === me;
+    if (!sent && !took) return;
+    history.push(resultObj_(r, data, me));
+    if (sent && String(r[9]) !== 'Yes') {
+      if (news.length < 5) news.push(resultObj_(r, data, me));
+      res.sh.getRange(k + 2, 10).setValue('Yes');
+    }
+  });
+  history.sort((a, b) => b.when - a.when);
+  return { news: news, history: history.slice(0, 10) };
+}
+
+// Public: what a challenge link says, for the banner on the page.
+function getChallenge(id) {
+  const ch = readChallenge_(id);
+  if (!ch) throw new Error('That challenge link was not found. You can still play!');
+  const s = settings_();
+  const data = readPlayers_();
+  const out = challengePublic_(data, ch, s);
+  const results = challengeResults_().rows.filter(r => String(r[1]) === ch.id);
+  out.taken = results.length;
+  out.beaten = results.filter(r => String(r[8]) === 'win').length;
+  return out;
+}
+
+// Makes a "beat my score" link from the player's last run or today's Daily 10.
+function createChallenge(token, mode, replyTo) {
+  mode = mode === 'Daily' ? 'Daily' : 'Endless';
+  const s = settings_();
+  const today = todayKey_(s);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const data = readPlayers_();
+    const i = findTokenRow_(data, token);
+    if (i < 0) throw new Error('Please refresh the page.');
+    const row = data.rows[i];
+    let score;
+    if (mode === 'Daily') {
+      if (!(normDate_(row[P.DAILYDATE], s) === today && String(row[P.DAILYDONE]) === 'Yes')) throw new Error('Finish today\'s Daily 10 first.');
+      score = Number(row[P.DAILYSCORE]) || 0;
+    } else if (row[P.STATUS] === 'Out') score = Math.max(0, (Number(row[P.OUTDAY]) || 1) - 1);
+    else if (row[P.STATUS] === 'Alive' && Number(row[P.DAYS]) > 0) score = Number(row[P.DAYS]) || 0;
+    else score = Math.max(Number(row[P.BEST]) || 0, 0);
+    const reply = readChallenge_(replyTo) ? String(replyTo).trim() : '';
+    const sh = ss_().getSheetByName(TAB.CHALLENGES);
+    let id = '';
+    if (sh.getLastRow() > 1) {
+      const rows = sh.getRange(2, 1, sh.getLastRow() - 1, CHALLENGE_HEADERS.length).getValues();
+      const same = rows.find(r => String(r[2]) === row[P.ID] && String(r[4]) === mode && Number(r[5]) === score &&
+        normDate_(r[6], s) === today && String(r[7] || '') === reply);
+      if (same) id = String(same[0]);
+    }
+    if (!id) {
+      id = 'C' + Utilities.getUuid().replace(/-/g, '').slice(0, 10);
+      sh.getRange(sh.getLastRow() + 1, 7).setNumberFormat('@');
+      sh.appendRow([id, new Date(), row[P.ID], row[P.NAME], mode, score, today, reply]);
+    }
+    const base = gameUrl_() || 'https://holdouttrivia.com/';
+    return { id: id, mode: mode, score: score, fromName: String(row[P.NAME]),
+      url: base + (base.indexOf('?') >= 0 ? '&' : '?') + 'c=' + id + '&ref=' + row[P.ID] };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// A player opened a challenge link. Endless: their next full run counts. Daily: today's Daily 10 counts.
+function acceptChallenge(token, id) {
+  const s = settings_();
+  const today = todayKey_(s);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const data = readPlayers_();
+    const i = findTokenRow_(data, token);
+    if (i < 0) throw new Error('Please refresh the page.');
+    const row = data.rows[i];
+    const ch = readChallenge_(id);
+    if (!ch) throw new Error('That challenge link was not found. You can still play!');
+    const pub = challengePublic_(data, ch, s);
+    if (ch.fromId === row[P.ID]) return { status: 'own', challenge: pub };
+    const prior = challengeResults_().rows.filter(r => String(r[1]) === ch.id && String(r[5]) === row[P.ID]).pop();
+    if (prior) return { status: 'done', challenge: pub, result: resultObj_(prior, data, String(row[P.ID])) };
+    let out;
+    if (ch.mode === 'Daily') {
+      if (pub.expired) return { status: 'expired', challenge: pub };
+      if (normDate_(row[P.DAILYDATE], s) === today && String(row[P.DAILYDONE]) === 'Yes') {
+        const result = finishChallenge_(data, row, ch, Number(row[P.DAILYSCORE]) || 0);
+        out = { status: 'done', challenge: pub, result: result };
+      } else {
+        row[P.DCH] = ch.id;
+        out = { status: 'active', challenge: pub };
+      }
+    } else if (row[P.STATUS] === 'Alive' && (Number(row[P.DAYS]) || 0) > 0) {
+      row[P.ECH] = '~' + ch.id;
+      out = { status: 'pending', challenge: pub };
+    } else {
+      if (row[P.STATUS] !== 'Alive') {
+        if (row[P.REASON] === 'Removed by admin' && row[P.STATUS] === 'Out') throw new Error('This account was paused by the game organizer.');
+        startRun_(row, s);
+      }
+      row[P.ECH] = ch.id;
+      const served = serveEndless_(row, s);
+      out = { status: 'active', challenge: pub, question: served.q ? publicQuestion_(served.q, 1, false) : null };
+    }
+    writePlayer_(data.sh, i, row);
+    out.player = profile_(row, data, s);
+    return out;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 /* ---------------- helpers for runs ---------------- */
 
 function findTokenRow_(data, token) {
@@ -1843,6 +2083,7 @@ function startRun_(row, s) {
   row[P.REASON] = '';
   row[P.CURQ] = '';
   row[P.COMEBACKS] = 0;
+  if (String(row[P.ECH] || '').charAt(0) === '~') row[P.ECH] = String(row[P.ECH]).slice(1);
   return true;
 }
 
@@ -2024,7 +2265,8 @@ function okImported_(text, right, wrong) {
 function upgradeToV9_(ss) {
   const notes = [];
   const ps = ss.getSheetByName(TAB.PLAYERS);
-  if (ps && ps.getLastRow() > 0 && ps.getLastColumn() < PLAYER_HEADERS.length && String(ps.getRange(1, 1).getValue()) === 'Player ID') {
+  if (ps && ps.getLastRow() > 0 && String(ps.getRange(1, 1).getValue()) === 'Player ID' &&
+      ps.getRange(1, 1, 1, ps.getLastColumn()).getValues()[0].map(String).indexOf('Saved Account') < 0) {
     ps.getRange(1, 1, 1, PLAYER_HEADERS.length).setValues([PLAYER_HEADERS]);
     styleHeader_(ps, PLAYER_HEADERS.length);
     if (ps.getLastRow() > 1) {

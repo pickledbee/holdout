@@ -201,7 +201,9 @@ function panelGetData() {
       days7: playDays.filter(n => n >= 7).length,
       restarts: players.reduce((t, p) => t + Math.max(0, p.attempt - 1), 0),
       comebacks: players.reduce((t, p) => t + p.comebacks, 0),
-      shares: Number(PropertiesService.getScriptProperties().getProperty('SHARES_TOTAL')) || 0
+      shares: Number(PropertiesService.getScriptProperties().getProperty('SHARES_TOTAL')) || 0,
+      challengesMade: (function () { const sh = ss.getSheetByName(TAB.CHALLENGES); return sh ? Math.max(0, sh.getLastRow() - 1) : 0; })(),
+      challengesFinished: (function () { const sh = ss.getSheetByName(TAB.CHRESULTS); return sh ? Math.max(0, sh.getLastRow() - 1) : 0; })()
     },
     levelCounts: levelCounts,
     levelAvg: levelAvg,

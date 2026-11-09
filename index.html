@@ -201,6 +201,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   <div class="msg" id="msg"></div>
 
+  <div class="card" id="newsCard" style="display:none"></div>
+
   <div class="card" id="main"></div>
 
   <div class="whoami" id="whoami"></div>
@@ -251,6 +253,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   var timer = null;
   var shareTextNow = '';
   var shareKind = 'result';
+  var shareUrlNow = '';
+  var challengeInfo = null;   // the challenge link this visitor arrived on
+
+  // Challenge code from a "Beat my score" link
+  (function () {
+    var cc = '';
+    try { cc = new URLSearchParams(window.location.search).get('c') || ''; } catch (e) {}
+    if (/^C[a-f0-9]{10}$/.test(cc)) store('holdout_challenge', cc);
+    try { if (cc || /[?&]ref=/.test(location.search)) history.replaceState(null, '', location.pathname + location.hash); } catch (e) {}
+  })();
+  function getChallengeCode() { return read('holdout_challenge'); }
 
   // ---------- analytics: game events sent to Google Tag Manager ----------
   function track(event, params) {
@@ -352,7 +365,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     document.querySelectorAll('.hallAt').forEach(function (el) { el.textContent = state.hallAt || 30; });
     if (state.disclosure) $('footerDisclosure').textContent = state.disclosure;
     var b = $('refBanner');
-    if (state.referrerName && !state.player) {
+    if (renderChallengeBanner()) {
+      // a banner is showing
+    } else if (false) {
       b.innerHTML = '<b>' + esc(state.referrerName) + '</b> challenged you! Answer the question below to start. No sign-up needed.';
       b.style.display = 'block';
     } else b.style.display = 'none';
@@ -383,6 +398,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     setTabs();
     if (v !== 'endless' && v !== 'daily' && timer) { clearInterval(timer); timer = null; }
     track('holdout_tab', { tab: v });
+    renderNews();
     if (v === 'endless') renderEndless();
     else if (v === 'daily') loadDaily();
     else if (v === 'board') loadBoard();
@@ -473,6 +489,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   function drawEndlessQuestion() {
     selected = null; busy = false;
+    renderChallengeBanner();
     var first = !state || !state.player;
     $('main').innerHTML =
       '<div class="qmeta">' + streakLine() + tierNote(q.difficulty) + '</div>' +
@@ -495,7 +512,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if (!state || !state.player || q.starter) {
       var st = read('holdout_starters_seen');
       store('holdout_starters_seen', (st ? st + ',' : '') + q.id);
-      promise = call('startGuestEndless', getDevice(), getRef(), q.id, choice, q.text).then(function (r) {
+      var gcc = challengeInfo && challengeInfo.mode === 'Endless' && !challengeInfo.expired ? getChallengeCode() : '';
+      promise = call('startGuestEndless', getDevice(), getRef(), q.id, choice, q.text, gcc).then(function (r) {
+        if (gcc) { store('holdout_challenge', ''); track('holdout_challenge_accept', { mode: 'Endless', new_player: true }); }
         setToken(r.token);
         store('holdout_ref', '');
         track('holdout_first_answer', { invited: !!getRef(), correct: !!r.correct });
@@ -532,6 +551,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   function showEndlessResult(r, choice) {
     lastResult = r;
     state.player = r.player;
+    if ('activeChallenge' in r) state.activeChallenge = r.activeChallenge;
     if (r.disclosure) state.disclosure = r.disclosure;
     track('holdout_answer', { mode: 'endless', correct: !!r.correct, question_number: r.correct ? r.score : r.score + 1 });
     var right = $('c' + r.correctLetter); if (right) right.classList.add('right');
@@ -542,6 +562,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if (r.correct) {
       html += '<div class="big good">Correct! ' + r.score + ' in a row</div>';
       if (r.hallOfFame) html += '<div class="celebrate">You made the Hall of Fame!</div>';
+      if (r.challengePassed) html += '<div class="celebrate" style="font-size:20px">You passed ' + esc(r.challengePassed.fromName) + '\'s ' + r.challengePassed.theirScore + '! Keep going to raise the bar.</div>';
     } else {
       html += '<div class="big bad">Not quite. It was ' + esc(r.correctLetter) + ', ' + esc(r.correctText) + '.</div>';
     }
@@ -557,6 +578,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     }
     $('endlessResult').innerHTML = html;
     renderWhoami(); setTabs();
+    renderChallengeBanner();
     var nb = $('nextBtn'); if (nb) nb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
@@ -574,7 +596,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     var score = r ? r.score : (p.outOn ? p.outOn - 1 : p.score);
     track('holdout_run_over', { score: score });
     var newBest = r && p.best === score && score > 0;
-    var html = '<h2>Run over</h2>' +
+    var html = (r && r.challenge ? challengeResultHtml(r.challenge) : '') + '<h2>Run over</h2>' +
       '<div class="squares">' + squares(score, true) + '</div>' +
       '<div class="status">' + (score === 0 ? 'Tough first question!' : plural(score, 'right answer') + ' in a row') + '</div>' +
       (newBest ? '<div class="good"><b>That is your best run yet!</b></div>' : '<div class="small">Your best: ' + p.best + '</div>') +
@@ -584,14 +606,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       html += '<button class="btn ghost" onclick="useComeback()">Use a comeback and keep this run going (' + p.bonus + ' left)</button>';
     }
     if (!p.saved) html += saveNudge();
-    shareKind = 'result';
+    shareKind = 'challenge';
     shareTextNow = endlessShareText(score, p.best);
-    html += shareBox('Challenge your friends');
+    shareUrlNow = '';
+    if (!(r && r.challenge)) html += challengeBox('Challenge a friend to beat ' + score);
     html += inviteBox(p);
     html += adHtml(r ? r.ad : state.slotAd);
     if (r && r.questionId) html += reportLink(r.questionId);
     else if (p.lastQuestionId) html += reportLink(p.lastQuestionId);
     $('main').innerHTML = html;
+    if (!(r && r.challenge)) makeChallenge('Endless', '');
+    renderChallengeBanner();
     window.scrollTo({ top: $('navtabs').offsetTop, behavior: 'smooth' });
   }
 
@@ -633,6 +658,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   function drawDailyQuestion() {
     selected = null; busy = false;
+    renderChallengeBanner();
     if (!dq) { $('main').innerHTML = '<p>Today\'s Daily is not ready yet. Please check back soon.</p>'; return; }
     var d = daily;
     var res = d.results && d.results.length ? d.results : dailySquaresEmpty(d.total);
@@ -662,7 +688,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     var choice = selected, b = $('lockBtn');
     b.disabled = true; b.textContent = 'Checking...';
     lockChoices();
-    ensurePlayer().then(function () { return call('answerDaily', getToken(), choice); }).then(function (r) {
+    ensurePlayer().then(acceptPendingDaily).then(function () { return call('answerDaily', getToken(), choice); }).then(function (r) {
+      if (r.challenge) daily.challengeResult = r.challenge;
       track('holdout_answer', { mode: 'daily', correct: !!r.correct, question_number: dq.number });
       state.player = r.player;
       daily.results = r.results; daily.score = r.score; daily.done = r.done; daily.streak = r.streak;
@@ -691,14 +718,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     var d = daily, p = state && state.player;
     shareKind = 'daily';
     shareTextNow = dailyShareText(d);
-    var html = '<h2>Daily 10 &middot; ' + esc(d.label) + '</h2>' +
+    shareUrlNow = '';
+    var html = (d.challengeResult ? challengeResultHtml(d.challengeResult) : '') + '<h2>Daily 10 &middot; ' + esc(d.label) + '</h2>' +
       '<div class="squares">' + dailySquares(d.results) + '</div>' +
       '<div class="status">' + d.score + ' of ' + d.total + '</div>' +
       (d.streak ? '<div class="small">Daily streak: <b>' + plural(d.streak, 'day') + '</b> in a row</div>' : '') +
       '<p class="small">Next Daily 10 in <span class="cd countdown" style="font-size:18px">' + fmtTime(d.secondsToTomorrow) + '</span></p>' +
       '<button class="btn" onclick="go(\'endless\')">Keep playing: Endless</button>';
     if (p && !p.saved) html += saveNudge();
-    html += shareBox('Share your squares');
+    if (!d.challengeResult) html += challengeBox('Challenge a friend to beat your ' + d.score + '/10');
     if (d.yesterday && d.yesterday.questions && d.yesterday.questions.length) {
       html += '<details class="yday"><summary>Yesterday\'s answers (' + esc(d.yesterday.label) + ')</summary><ul class="list">' +
         d.yesterday.questions.map(function (x) {
@@ -707,6 +735,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         }).join('') + '</ul></details>';
     }
     $('main').innerHTML = html;
+    if (!d.challengeResult) makeChallenge('Daily', '');
+    renderChallengeBanner();
     startCountdown(d.secondsToTomorrow);
   }
 
@@ -759,6 +789,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     html += b.hall && b.hall.length ? list(b.hall, function (h) {
       return '<li>' + nameCell(h.name) + '<span>' + esc(h.date) + (h.comebacks ? ' <span class="badge">' + plural(h.comebacks, 'comeback') + '</span>' : '') + '</span></li>';
     }) : '<p class="small">Nobody yet. Be the first to get ' + (b.hallAt || 30) + ' in a row.</p>';
+    var hist = state && state.challengeHistory;
+    if (hist && hist.length) {
+      html += '<h3>Your challenges</h3>' + list(hist, function (x) {
+        var word = x.outcome === 'win' ? '<b class="good">You won</b>' : x.outcome === 'lose' ? '<b class="bad">They won</b>' : '<b>Tie</b>';
+        return '<li><span>' + (x.youTook ? 'You vs ' : '') + esc(x.otherName) + (x.youTook ? '' : ' took yours') + '</span><span>' +
+          x.yourScore + ' to ' + x.theirScore + ' &middot; ' + word + '</span></li>';
+      });
+    }
     if (p) html += inviteBox(p);
     $('main').innerHTML = html;
   }
@@ -833,7 +871,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if (red) out += '🟥';
     return out;
   }
-  function shareLink() { var p = state && state.player; return (p && p.inviteUrl) || (state && state.shareUrl) || 'https://holdouttrivia.com'; }
+  function shareLink() { var p = state && state.player; return shareUrlNow || (p && p.inviteUrl) || (state && state.shareUrl) || 'https://holdouttrivia.com'; }
   function endlessShareText(score, best) {
     var name = ((state && state.gameName) || 'Holdout').toUpperCase();
     return name + '\nI got ' + score + ' in a row' + (best > score ? ' (my best is ' + best + ')' : '') + '\n' +
@@ -975,9 +1013,151 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       '</div>';
   }
 
+  // ================= "BEAT MY SCORE" CHALLENGES =================
+  function who(name) { return '<b>' + esc(name) + '</b>'; }
+
+  // The yellow banner at the top: what challenge you're in
+  function renderChallengeBanner() {
+    var b = $('refBanner'), html = '';
+    var ac = state && state.activeChallenge;
+    var p = state && state.player;
+    if (view === 'endless' && ac && ac.endless) {
+      var e = ac.endless;
+      if (e.pending) html = 'Challenge from ' + who(e.fromName) + ': beat ' + e.score + ' in a row. It starts with your next run.';
+      else {
+        var now = p && p.status === 'Alive' ? p.score : 0;
+        html = now > e.score ? 'You passed ' + who(e.fromName) + '\'s ' + e.score + '! Every extra answer raises the bar.'
+          : 'Challenge: beat ' + who(e.fromName) + '\'s <b>' + e.score + '</b> in a row. You are at <b>' + now + '</b>.';
+      }
+    } else if (view === 'daily' && ac && ac.daily) {
+      html = 'Challenge: beat ' + who(ac.daily.fromName) + '\'s <b>' + ac.daily.score + '/10</b> on today\'s Daily 10.';
+    } else if (challengeInfo && getChallengeCode()) {
+      var c = challengeInfo;
+      if (c.expired) html = who(c.fromName) + ' challenged you on an earlier Daily 10. Play today\'s and send your own challenge!';
+      else if (c.mode === 'Daily') html = who(c.fromName) + ' got <b>' + c.score + ' of 10</b> on today\'s Daily 10. Can you beat it?';
+      else html = who(c.fromName) + ' got <b>' + c.score + ' in a row</b>. Can you beat it?' + (view === 'endless' ? ' Your first question is below.' : '');
+      if (c.taken) html += '<div class="small">' + (c.taken === 1 ? '1 person has' : c.taken + ' people have') + ' tried. ' + c.beaten + ' beat it.</div>';
+    } else if (state && state.referrerName && !state.player) {
+      html = '<b>' + esc(state.referrerName) + '</b> challenged you! Answer the question below to start. No sign-up needed.';
+    }
+    if (html) { b.innerHTML = html; b.style.display = 'block'; return true; }
+    b.style.display = 'none';
+    return false;
+  }
+
+  // Win / lose / tie card, with a "Challenge them back" button
+  function challengeResultHtml(x) {
+    var other = esc(x.otherName);
+    var top = x.outcome === 'win' ? '<div class="celebrate">You win!</div><div class="center">You got <b>' + x.yourScore + '</b>. ' + other + ' got ' + x.theirScore + '.</div>'
+      : x.outcome === 'lose' ? '<div class="celebrate" style="color:var(--bad)">' + other + ' wins this one</div><div class="center">' + other + ' got <b>' + x.theirScore + '</b>. You got ' + x.yourScore + '.</div>'
+      : '<div class="celebrate">It\'s a tie!</div><div class="center">You both got <b>' + x.yourScore + '</b>.</div>';
+    track('holdout_challenge_result', { outcome: x.outcome, mode: x.mode || '' });
+    return '<div class="result" style="margin:0 0 16px">' + top +
+      '<div id="backArea"><button class="btn" onclick="challengeBack(\'' + esc(x.challengeId) + '\',\'' + (x.mode === 'Daily' ? 'Daily' : 'Endless') + '\',\'' +
+      esc(x.otherName).replace(/'/g, '') + '\',' + x.yourScore + ',' + x.theirScore + ')">Challenge ' + other + ' back</button></div></div>';
+  }
+  function challengeBack(id, mode, otherName, mine, theirs) {
+    $('backArea').innerHTML = challengeBox(mine > theirs ? 'Rub it in a little' : 'Ask for a rematch');
+    var name = ((state && state.gameName) || 'Holdout').toUpperCase();
+    shareTextNow = name + '\n' + (mode === 'Daily' ? 'Daily 10: ' : '') + 'I got ' + mine + (mode === 'Daily' ? '/10' : ' in a row') + '. You got ' + theirs + '.\n' +
+      (mine > theirs ? 'Your turn. Can you beat me back?' : mine === theirs ? 'Tiebreaker?' : 'Rematch! Beat me again if you can.');
+    $('shareText').textContent = shareTextNow;
+    makeChallenge(mode, id);
+  }
+
+  // Share box for a challenge link. The link is made in the background.
+  function challengeBox(label) {
+    var p = state && state.player;
+    return shareBox(label) +
+      (p && !p.saved ? '<div class="small center">Friends will see you as ' + esc(p.name) + '. <button class="link" onclick="go(\'save\')">Pick your own name</button></div>' : '');
+  }
+  function makeChallenge(mode, replyTo) {
+    var base = shareTextNow;
+    call('createChallenge', getToken(), mode, replyTo || '').then(function (c) {
+      shareUrlNow = c.url;
+      shareTextNow = base.replace(/\n?https?:\/\/\S+$/, '') + (replyTo ? '' : '\nCan you beat me?') + '\n' + c.url;
+      shareTextNow = shareTextNow.replace('How many can you get?\nCan you beat me?', 'Can you beat me?');
+      var t = $('shareText'); if (t) t.textContent = shareTextNow;
+      track('holdout_challenge_made', { mode: mode, reply: !!replyTo });
+    }).catch(function () {});
+  }
+
+  // Someone who already plays opened a challenge link
+  function acceptPending() {
+    var cc = getChallengeCode();
+    if (!cc || !getToken()) return Promise.resolve(null);
+    return call('acceptChallenge', getToken(), cc).then(function (r) {
+      store('holdout_challenge', '');
+      challengeInfo = r.challenge;
+      if (r.player) state.player = r.player;
+      track('holdout_challenge_accept', { mode: r.challenge.mode, status: r.status });
+      if (r.status === 'active' || r.status === 'pending') {
+        state.activeChallenge = state.activeChallenge || {};
+        state.activeChallenge[r.challenge.mode === 'Daily' ? 'daily' : 'endless'] = Object.assign({ pending: r.status === 'pending' }, r.challenge);
+      }
+      if (r.question) { q = r.question; lastResult = null; }
+      return r;
+    }).catch(function (e) { store('holdout_challenge', ''); showError(e); return null; });
+  }
+  function acceptPendingDaily() {
+    if (!getChallengeCode() || !challengeInfo || challengeInfo.mode !== 'Daily') return Promise.resolve();
+    return acceptPending().then(function (r) {
+      if (r && r.status === 'done') { daily.challengeResult = r.result; }
+    });
+  }
+  function showAccepted(r) {
+    if (!r) { go(challengeInfo && challengeInfo.mode === 'Daily' ? 'daily' : 'endless'); return; }
+    if (r.status === 'done') {
+      view = r.challenge.mode === 'Daily' ? 'daily' : 'endless'; setTabs();
+      $('main').innerHTML = challengeResultHtml(Object.assign({ mode: r.challenge.mode }, r.result)) +
+        '<button class="btn ghost" onclick="go(\'' + view + '\')">Keep playing</button>';
+      $('refBanner').style.display = 'none';
+      return;
+    }
+    if (r.status === 'own') {
+      go(r.challenge.mode === 'Daily' ? 'daily' : 'endless');
+      $('refBanner').innerHTML = 'This is your own challenge link. Send it to friends and see who can beat you!';
+      $('refBanner').style.display = 'block';
+      return;
+    }
+    go(r.challenge.mode === 'Daily' && !r.challenge.expired ? 'daily' : 'endless');
+  }
+
+  // News for the person who sent challenges: "Lucky Otter took your challenge..."
+  function renderNews() {
+    var card = $('newsCard'), n = state && state.challengeNews;
+    if (!n || !n.length || view !== 'endless') { card.style.display = 'none'; return; }
+    card.innerHTML = '<h2>Challenge results</h2><ul class="list">' + n.map(function (x) {
+      var line = x.outcome === 'win' ? who(x.otherName) + ' got ' + x.theirScore + '. Your ' + x.yourScore + ' held up. <b class="good">You win!</b>'
+        : x.outcome === 'lose' ? who(x.otherName) + ' got ' + x.theirScore + ' and beat your ' + x.yourScore + '. <b class="bad">They win.</b>'
+        : who(x.otherName) + ' tied you at ' + x.yourScore + '.';
+      return '<li style="display:block">' + line + '</li>';
+    }).join('') + '</ul><div class="row2"><button class="btn ghost" onclick="state.challengeNews=[];renderNews()">Got it</button></div>';
+    card.style.display = 'block';
+  }
+
   // ================= START =================
   (function start() {
     var hash = (location.hash || '').replace('#', '');
+    var cc = getChallengeCode();
+    var chLoad = cc ? call('getChallenge', cc).then(function (c) { challengeInfo = c; return c; }).catch(function () { store('holdout_challenge', ''); return null; })
+      : Promise.resolve(null);
+    if (cc && getToken()) {
+      $('main').innerHTML = '<div class="loading">Loading your challenge...</div>';
+      Promise.all([chLoad, loadState()]).then(acceptPending).then(showAccepted)
+        .catch(function (e) { $('main').innerHTML = ''; showError(e); });
+      return;
+    }
+    if (cc) {
+      track('holdout_first_view', { invited: true, challenge: true });
+      q = randomStarter(); drawEndlessQuestion();
+      chLoad.then(function (c) {
+        renderChallengeBanner();
+        if (c && c.mode === 'Daily' && !c.expired && !(state && state.player)) go('daily');
+      });
+      loadState().catch(function () {});
+      return;
+    }
     if (!getToken()) {
       // Brand-new visitor: show a question immediately, load everything else quietly.
       if (hash === 'daily' || hash === 'board') go(hash); else { q = randomStarter(); drawEndlessQuestion(); }
