@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <!-- Google Tag Manager -->
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -10,10 +10,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <!-- End Google Tag Manager -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Holdout</title>
-<meta name="description" content="One trivia question a day. One wrong answer ends your run. Can you get 30 in a row?">
-<meta property="og:title" content="Holdout">
-<meta property="og:description" content="One trivia question a day. One wrong answer ends your run. Can you get 30 in a row?">
+<title>Holdout Trivia: how many can you get right in a row?</title>
+<meta name="description" content="Free trivia, no sign-up. How many questions can you get right in a row? Play as long as you like, or try today's Daily 10.">
+<meta property="og:title" content="Holdout Trivia">
+<meta property="og:description" content="How many trivia questions can you get right in a row? Free, no sign-up.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://holdouttrivia.com/share.png">
 <meta property="og:image:width" content="1200">
@@ -22,6 +22,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 <meta name="theme-color" content="#0f1626">
 <script src="config.js"></script>
 <style>
+
   :root {
     --bg: #0f1626;
     --card: #182238;
@@ -135,6 +136,46 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .rank b { color: var(--accent); }
   .progress { height: 8px; background: var(--bg); border-radius: 999px; overflow: hidden; margin: 10px 0 4px; }
   .progress div { height: 100%; background: var(--accent); }
+  /* ---- version 9 additions ---- */
+  header { padding: 10px 0 4px; }
+  h1 { font-size: 40px; }
+  .navtabs { display: flex; gap: 6px; margin-top: 14px; position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 8px 0; }
+  .navtabs button { flex: 1; padding: 11px 6px; border-radius: 12px; border: 1px solid var(--line); background: var(--card);
+    color: var(--muted); font-weight: 700; font-size: 15px; }
+  .navtabs button.on { background: var(--card2); color: var(--text); border-color: var(--accent); }
+  .navtabs .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-left: 5px; vertical-align: middle; }
+  .card { margin-top: 10px; }
+  .qmeta { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: var(--muted); }
+  .qmeta b { color: var(--accent); }
+  .streakbig { font-size: 15px; color: var(--muted); }
+  .streakbig b { font-size: 22px; color: var(--accent); }
+  .choice.right { border-color: var(--good); background: #12301f; }
+  .choice.right .letter { background: var(--good); color: #07160e; }
+  .choice.wrong { border-color: var(--bad); background: #3a1f27; }
+  .choice.wrong .letter { background: var(--bad); color: #2a0b0b; }
+  .choice:disabled { cursor: default; }
+  .result { margin-top: 14px; padding: 14px; border-radius: 12px; background: var(--card2); }
+  .result .big { font-size: 22px; font-weight: 800; }
+  .fact { margin-top: 6px; color: var(--text); }
+  .fact:before { content: "Fun fact: "; color: var(--accent); font-weight: 700; }
+  .comfort { text-align: center; font-size: 14px; color: var(--muted); margin-top: 12px; }
+  .banner { margin-top: 10px; padding: 12px 14px; border-radius: 12px; background: #2a2414; border: 1px solid var(--accent); text-align: center; }
+  .squares { font-size: 22px; letter-spacing: 2px; margin: 8px 0; line-height: 1.3; }
+  .savebox { margin-top: 16px; padding: 14px; border-radius: 12px; background: var(--card2); border: 1px dashed var(--accent); }
+  .savebox input[type=text], .savebox input[type=password] { margin-top: 2px; }
+  .whoami { text-align: center; font-size: 14px; color: var(--muted); margin-top: 14px; }
+  .whoami b { color: var(--text); }
+  .row2 { display: flex; gap: 10px; }
+  .row2 .btn { flex: 1; }
+  .yday { margin-top: 10px; }
+  .yday li { display: block !important; }
+  .yday li b { color: var(--good); }
+  .yday li span { color: var(--muted) !important; text-align: left !important; display: block; font-size: 14px; }
+  .hint { font-size: 13px; color: var(--muted); text-align: center; margin-top: 8px; }
+  .credit { font-size: 12px; }
+  .credit a, .footer a { color: var(--muted); }
+  .celebrate { font-size: 26px; font-weight: 800; color: var(--accent); text-align: center; }
+  .me { color: var(--accent) !important; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -146,45 +187,40 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
   <header>
     <h1 id="gameName">Holdout</h1>
-    <div class="tagline" id="tagline"></div>
-    <div class="pills" id="pills"></div>
+    <div class="tagline" id="tagline">How many trivia questions can you get right in a row?</div>
+    <div class="pills" id="pills"><span class="pill">Free &middot; no sign-up &middot; ages 13+</span></div>
   </header>
+
+  <div class="banner" id="refBanner" style="display:none"></div>
+
+  <div class="navtabs" id="navtabs">
+    <button id="tab_endless" class="on" onclick="go('endless')">Play</button>
+    <button id="tab_daily" onclick="go('daily')">Daily 10</button>
+    <button id="tab_board" onclick="go('board')">Leaderboard</button>
+  </div>
 
   <div class="msg" id="msg"></div>
 
-  <div class="card" id="main"><div class="loading">Loading...</div></div>
+  <div class="card" id="main"></div>
 
-  <div class="card" id="revealCard" style="display:none"></div>
+  <div class="whoami" id="whoami"></div>
 
-  <div class="card" id="circleCard" style="display:none"></div>
-
-  <div class="card" id="boardCard">
-    <h2>Leaderboard</h2>
-    <div id="board"><div class="loading">Loading...</div></div>
-  </div>
-
-  <div class="card" id="hallCard" style="display:none">
-    <h2>Hall of Fame</h2>
-    <div id="hall"></div>
-  </div>
-
-  <div class="card">
+  <div class="card" id="howCard">
     <h2>How to play</h2>
     <ul class="small">
-      <li>Answer one question a day. Your first one is ready right now.</li>
-      <li>Everyone's next question unlocks at midnight Central Time.</li>
-      <li>Questions get harder as you go. Get 30 in a row right to make the Hall of Fame.</li>
-      <li>One wrong answer ends your run.</li>
-      <li>Busy day? You get 2 pause days per run. Missing a day uses one, and your question waits for you.</li>
-      <li>Knocked out? Start a new run for free, or invite a friend: when they join with your link, you can continue from where you left off.</li>
-      <li>Each answer is revealed after the next midnight, so no spoilers.</li>
-      <li>Think a question was unfair? Report it. If it was wrong, everyone it knocked out gets brought back.</li>
+      <li><b>Play:</b> answer as many questions as you like. Every right answer adds 1 to your streak. One wrong answer ends the run, then just start another. Questions get harder the longer you last.</li>
+      <li>See the answer and a fun fact right after every question.</li>
+      <li><b>Daily 10:</b> the same 10 questions for everyone, once a day. One miss ends it. Answers are shown the next day, so share your squares, not the answers.</li>
+      <li>Reach <span class="hallAt">30</span> in a row to get into the Hall of Fame.</li>
+      <li><b>Comebacks:</b> when a friend uses your link and answers 3 questions, you get a comeback. Use it to keep a run going after a wrong answer (up to 2 a day).</li>
+      <li>No sign-up needed. You get a fun name to start. Pick your own name and a PIN any time to save your spot and play on other devices.</li>
+      <li>Think a question is wrong? Report it right from the answer screen.</li>
     </ul>
     <details>
       <summary>Privacy and rules</summary>
-      <p>Players must be 13 or older.</p>
+      <p>Players must be 13 or older. By playing, you confirm you are.</p>
       <p>We use Google Analytics to count visits and see which parts of the game people use. It uses cookies and does not receive your display name or PIN.</p>
-      <p>We only store the display name you choose, a scrambled version of your PIN, when you joined, your answers and how long they took, and a random code for your browser that helps us spot cheating. We do not ask for your email or real name, and we never sell or share your information.</p>
+      <p>We only store your display name (an automatic fun name until you pick one), a scrambled version of your PIN if you set one, your answers and how long they took, and a random code for your browser that helps us spot cheating. We do not ask for your email or real name, and we never sell or share your information.</p>
       <p>Playing more than one account, or making fake accounts to earn comebacks, gets you removed.</p>
       <p>Your display name appears on the public leaderboard, so do not use your full real name.</p>
       <p>There are no prizes. Bragging rights only.</p>
@@ -194,16 +230,27 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
 
   <div class="footer" id="footerDisclosure">As an Amazon Associate I earn from qualifying purchases.</div>
+  <div class="footer credit">Some questions come from the <a href="https://opentdb.com" target="_blank" rel="noopener">Open Trivia Database</a>, licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>.</div>
 
 </div>
 
 <script>
-  var state = null;
+  // Easy starter questions, so a first-time visitor can play the moment the page opens.
+  // (No answers are in here. Answers are checked by the game server.)
+  var STARTERS = [["Q001", "Which planet is known as the Red Planet?", "Venus", "Mars", "Jupiter", "Mercury"], ["Q002", "How many legs does a spider have?", "6", "10", "8", "12"], ["Q003", "What is the largest ocean on Earth?", "Atlantic", "Indian", "Arctic", "Pacific"], ["Q004", "Which instrument has 88 keys on a standard modern model?", "Piano", "Violin", "Trumpet", "Harp"], ["Q005", "Which gas do plants take in from the air to make their food?", "Oxygen", "Nitrogen", "Carbon dioxide", "Helium"], ["Q006", "In which country are the Pyramids of Giza?", "Mexico", "Egypt", "Peru", "Greece"], ["Q007", "How many sides does a hexagon have?", "5", "7", "6", "8"], ["Q035", "What is the capital of Canada?", "Toronto", "Montreal", "Vancouver", "Ottawa"], ["Q037", "What color do you get by mixing blue and yellow paint?", "Green", "Purple", "Orange", "Brown"], ["Q038", "How many continents are usually taught in U.S. schools?", "5", "6", "7", "8"], ["Q039", "What is the largest planet in our solar system?", "Saturn", "Jupiter", "Neptune", "Earth"], ["Q040", "At what temperature does water freeze in degrees Fahrenheit?", "0", "100", "32", "212"], ["Q041", "Which animal is often called the King of the Jungle?", "Tiger", "Elephant", "Lion", "Gorilla"], ["Q042", "How many days are in a leap year?", "364", "365", "366", "367"], ["Q043", "What is the capital of France?", "Paris", "Lyon", "Marseille", "Nice"], ["Q044", "Which bird is a well-known symbol of peace?", "Eagle", "Dove", "Crow", "Owl"], ["Q045", "What do honeybees make?", "Silk", "Maple syrup", "Cheese", "Honey"], ["Q046", "Which ocean lies between the United States and Europe?", "Pacific", "Atlantic", "Indian", "Arctic"], ["Q047", "What is the tallest animal in the world?", "Giraffe", "Elephant", "Camel", "Moose"], ["Q048", "Which planet is closest to the Sun?", "Venus", "Mars", "Mercury", "Earth"], ["Q049", "How many players does one soccer team have on the field at a time?", "9", "10", "12", "11"], ["Q050", "What is the main ingredient in guacamole?", "Avocado", "Tomato", "Cucumber", "Pea"], ["Q051", "Which month has the fewest days?", "January", "February", "April", "November"], ["Q052", "Which gas in the air do people need to breathe to stay alive?", "Oxygen", "Helium", "Hydrogen", "Neon"], ["Q053", "In which country is the Great Wall?", "China", "Japan", "India", "Korea"], ["Q054", "What is the largest animal on Earth?", "African elephant", "Blue whale", "Giraffe", "Hippopotamus"], ["Q055", "Which instrument usually has six strings and is often strummed?", "Violin", "Harp", "Cello", "Guitar"], ["Q056", "What do you call a shape with four equal sides and four right angles?", "Triangle", "Square", "Pentagon", "Octagon"], ["Q057", "Which famous ship sank in 1912 after hitting an iceberg?", "Lusitania", "Mayflower", "Titanic", "Britannic"], ["Q058", "What is the capital of the United States?", "New York City", "Washington, D.C.", "Philadelphia", "Boston"], ["Q059", "How many legs does an insect have?", "6", "4", "8", "10"], ["Q060", "At what temperature does water boil in degrees Celsius at sea level?", "50", "90", "100", "120"], ["Q061", "Finish the saying: An apple a day keeps the ___ away.", "Dentist", "Doctor", "Teacher", "Rain"], ["Q062", "Who was the first President of the United States?", "Thomas Jefferson", "John Adams", "George Washington", "Abraham Lincoln"], ["Q063", "How many colors are in a rainbow, as traditionally listed?", "5", "6", "7", "8"], ["Q064", "What is the largest country in the world by area?", "Canada", "China", "United States", "Russia"], ["Q065", "Which of your senses depends most on your nose?", "Taste", "Smell", "Touch", "Hearing"], ["Q066", "What does a caterpillar turn into?", "A beetle", "A spider", "A butterfly or moth", "A dragonfly"], ["Q157", "How many sides does a pentagon have?", "4", "5", "6", "8"], ["Q158", "Which animal is famous for building dams in rivers?", "Otter", "Muskrat", "Raccoon", "Beaver"], ["Q159", "In which direction does the Sun rise?", "North", "East", "South", "West"], ["Q160", "How many hours are in a day?", "12", "24", "20", "36"], ["Q161", "What is a baby cat called?", "Kitten", "Pup", "Cub", "Calf"], ["Q162", "What is the closest star to Earth?", "Polaris", "Sirius", "The Sun", "Betelgeuse"], ["Q163", "How many wheels does a tricycle have?", "2", "4", "5", "3"], ["Q164", "Which yellow fruit is long and curved?", "Apple", "Grape", "Cherry", "Banana"], ["Q165", "Which season comes after summer?", "Winter", "Spring", "Monsoon", "Fall (autumn)"], ["Q166", "What is H2O more commonly called?", "Salt", "Water", "Sugar", "Air"], ["Q167", "What do you call a group of fish swimming together?", "A flock", "A herd", "A pack", "A school"], ["Q168", "Which shape is round and has no corners?", "Square", "Triangle", "Rectangle", "Circle"], ["Q169", "What is the capital of England?", "London", "Manchester", "Liverpool", "Oxford"], ["Q170", "What color do you get by mixing red and white paint?", "Purple", "Orange", "Brown", "Pink"], ["Q171", "What is a baby dog called?", "Kitten", "Puppy", "Foal", "Lamb"], ["Q172", "Which planet is famous for its bright rings?", "Mars", "Saturn", "Mercury", "Venus"], ["Q173", "How many days are in a week?", "5", "7", "6", "8"], ["Q174", "Which holiday is celebrated on December 25?", "Christmas", "Halloween", "Thanksgiving", "Easter"], ["Q175", "What is the main language spoken in Mexico?", "Spanish", "Portuguese", "French", "English"], ["Q176", "How many minutes are in an hour?", "60", "30", "90", "100"], ["Q177", "What color is an emerald?", "Red", "Blue", "Green", "Yellow"], ["Q178", "Which bird is famous for fanning out a colorful tail?", "Crow", "Peacock", "Robin", "Pigeon"], ["Q179", "What do plants need from the Sun to make their food?", "Light", "Sound", "Wind", "Snow"], ["Q180", "Bamboo is a giant type of what plant?", "Tree", "Fern", "Grass", "Cactus"], ["Q181", "How many strings does a standard ukulele have?", "3", "4", "6", "8"], ["Q182", "What is the largest land animal?", "African elephant", "Rhinoceros", "Hippopotamus", "Giraffe"], ["Q183", "What do bees collect from flowers to make honey?", "Pollen", "Nectar", "Sap", "Dew"], ["Q184", "Which is the coldest continent?", "Asia", "Antarctica", "Europe", "North America"], ["Q185", "Which toy bricks were invented in Denmark?", "LEGO", "K'NEX", "Lincoln Logs", "Tinkertoy"], ["Q186", "How many cents is a U.S. quarter worth?", "10", "20", "25", "50"], ["Q187", "Which is the smallest ocean?", "Indian", "Southern", "Atlantic", "Arctic"], ["Q188", "What gives plants their green color?", "Carotene", "Melanin", "Chlorophyll", "Hemoglobin"], ["Q189", "Which animal is famous for changing color to blend in?", "Iguana", "Salamander", "Toad", "Chameleon"], ["Q190", "How many players from one volleyball team are on the court at a time?", "6", "5", "7", "9"], ["Q191", "What is the main ingredient in most bread?", "Rice", "Flour", "Corn syrup", "Butter"], ["Q192", "Which planet is often called Earth's twin because of its similar size?", "Mars", "Venus", "Mercury", "Neptune"], ["Q193", "What does a thermometer measure?", "Wind", "Temperature", "Rain", "Weight"], ["Q194", "Which animal is the fastest on land?", "Lion", "Cheetah", "Horse", "Greyhound"], ["Q195", "How many planets are in our solar system?", "7", "8", "9", "10"], ["Q196", "Which famous detective lived at 221B Baker Street?", "Sherlock Holmes", "Hercule Poirot", "Nancy Drew", "Miss Marple"], ["Q197", "Who wrote Green Eggs and Ham?", "Dr. Seuss", "Roald Dahl", "Shel Silverstein", "Maurice Sendak"], ["Q198", "What color are most school buses in the United States?", "Red", "Blue", "Yellow", "Green"], ["Q199", "Which country is shaped like a boot?", "Spain", "Italy", "Greece", "Portugal"], ["Q200", "What is a baby frog called?", "Cub", "Kit", "Tadpole", "Fawn"], ["Q201", "How many sides does an octagon have?", "6", "7", "10", "8"], ["Q202", "Which part of a plant usually grows underground?", "Leaves", "Petals", "Flowers", "Roots"], ["Q203", "What is the capital of Spain?", "Madrid", "Barcelona", "Seville", "Valencia"], ["Q204", "Which animal is called the ship of the desert?", "Horse", "Donkey", "Camel", "Llama"], ["Q205", "What do you call a scientist who studies stars and planets?", "Astrologer", "Geologist", "Astronomer", "Botanist"], ["Q206", "Which color mixes with yellow to make orange?", "Blue", "Green", "Purple", "Red"], ["Q207", "How many letters are in the English alphabet?", "26", "24", "25", "28"], ["Q208", "What is the capital of Germany?", "Munich", "Hamburg", "Berlin", "Frankfurt"], ["Q209", "What kind of animal is a Komodo dragon?", "Snake", "Crocodile", "Lizard", "Dinosaur"], ["Q210", "Which sport uses a puck?", "Soccer", "Basketball", "Ice hockey", "Tennis"], ["Q211", "At what temperature does water freeze in degrees Celsius?", "-10", "10", "0", "32"], ["Q212", "Which organ pumps blood through your body?", "Lungs", "Liver", "Stomach", "Heart"], ["Q213", "What is the name of our galaxy?", "The Milky Way", "Andromeda", "Whirlpool", "Sombrero"], ["Q214", "Which fairy tale character leaves behind a glass slipper?", "Snow White", "Rapunzel", "Little Red Riding Hood", "Cinderella"], ["Q215", "What is a baby horse called?", "Calf", "Kid", "Joey", "Foal"], ["Q216", "How many years are in a century?", "10", "50", "100", "1,000"], ["Q217", "Which U.S. state is home to Hollywood?", "California", "Nevada", "Texas", "Florida"], ["Q218", "What is the national bird of the United States?", "Wild turkey", "Bald eagle", "Robin", "Great horned owl"], ["Q219", "How many inches are in a foot?", "10", "12", "16", "36"], ["Q220", "Which scientist is famous for the laws of motion and gravity?", "Isaac Newton", "Albert Einstein", "Charles Darwin", "Galileo Galilei"], ["Q221", "What do you call a shape with three sides?", "Triangle", "Square", "Pentagon", "Circle"], ["Q222", "Which black-and-white animal eats mostly bamboo?", "Giant panda", "Koala", "Raccoon", "Skunk"], ["Q223", "What is the name of the fairy in Peter Pan?", "Flora", "Fauna", "Merryweather", "Tinker Bell"], ["Q224", "Which metal are magnets strongly attracted to?", "Gold", "Copper", "Aluminum", "Iron"], ["Q225", "What is the main ingredient in french fries?", "Carrots", "Rice", "Potatoes", "Corn"], ["Q226", "What is the capital of Russia?", "St. Petersburg", "Moscow", "Kazan", "Sochi"], ["Q227", "In which ocean are the Hawaiian Islands?", "Atlantic", "Indian", "Pacific", "Arctic"], ["Q228", "What is an adult male deer often called?", "Doe", "Fawn", "Mare", "Buck"], ["Q229", "Which brass instrument changes pitch with a slide?", "Trumpet", "Trombone", "Tuba", "French horn"], ["Q230", "How many centimeters are in a meter?", "10", "12", "100", "1,000"], ["Q231", "What is a group of wolves called?", "A pack", "A pride", "A school", "A flock"]];
+
+  var state = null;         // from getState
+  var view = 'endless';     // endless | daily | board | login | save
+  var q = null;             // the Endless question on screen
   var selected = null;
+  var busy = false;
+  var lastResult = null;    // last Endless answer result
+  var daily = null;         // from getDaily
+  var dq = null;            // the Daily question on screen
+  var board = null;
   var timer = null;
-  var authMode = 'join';
-  var lastBoard = null;
-  var guestQ = null;
+  var shareTextNow = '';
+  var shareKind = 'result';
 
   // ---------- analytics: game events sent to Google Tag Manager ----------
   function track(event, params) {
@@ -221,11 +268,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   function read(k) { try { return localStorage.getItem(k) || window['_' + k] || ''; } catch (e) { return window['_' + k] || ''; } }
   function getToken() { return read('holdout_token'); }
   function setToken(t) { store('holdout_token', t); }
-  function clearToken() { store('holdout_token', ''); }
-  function getGuest() { try { return JSON.parse(read('holdout_guest') || 'null'); } catch (e) { return null; } }
-  function setGuest(g) { store('holdout_guest', g ? JSON.stringify(g) : ''); }
+  function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
+  function pct(a, b) { return b ? Math.round(100 * a / b) : 0; }
 
-  // Invite code from the link they arrived on (kept so it still counts if they join later)
+  // Invite code from the link they arrived on
   (function () {
     var r = '';
     try { r = new URLSearchParams(window.location.search).get('ref') || ''; } catch (e) {}
@@ -291,36 +337,516 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     timer = setInterval(function () {
       left--;
       document.querySelectorAll('.cd').forEach(function (el) { el.textContent = fmtTime(left); });
-      if (left <= 0) { clearInterval(timer); setTimeout(loadAll, 3000); }
+      if (left <= 0) { clearInterval(timer); daily = null; if (view === 'daily') setTimeout(function () { go('daily'); }, 3000); }
     }, 1000);
   }
-  function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
 
-  // ---------- sharing ----------
-  function squares(n, red) {
-    var out = '', count = 0;
-    for (var i = 0; i < n; i++) { out += '🟩'; count++; if (count % 10 === 0) out += '\n'; }
-    if (red) out += '🟥';
-    return out.replace(/\n$/, '');
+  // ---------- header bits ----------
+  function renderHeader() {
+    if (!state) return;
+    if (state.gameName) { $('gameName').textContent = state.gameName; document.title = state.gameName + ' Trivia: how many can you get right in a row?'; }
+    if (state.tagline) $('tagline').textContent = state.tagline;
+    var pills = '<span class="pill">Free &middot; no sign-up &middot; ages 13+</span>';
+    if (state.answeredToday > 0) pills += '<span class="pill"><b>' + state.answeredToday.toLocaleString() + '</b> answers today</span>';
+    $('pills').innerHTML = pills;
+    document.querySelectorAll('.hallAt').forEach(function (el) { el.textContent = state.hallAt || 30; });
+    if (state.disclosure) $('footerDisclosure').textContent = state.disclosure;
+    var b = $('refBanner');
+    if (state.referrerName && !state.player) {
+      b.innerHTML = '<b>' + esc(state.referrerName) + '</b> challenged you! Answer the question below to start. No sign-up needed.';
+      b.style.display = 'block';
+    } else b.style.display = 'none';
+    renderWhoami();
   }
-  function shareText() {
-    var p = state.player, L = state.length, url = p.inviteUrl || state.shareUrl || '';
-    var name = (state.gameName || 'Holdout').toUpperCase();
-    var cb = p.comebacks ? '\n(' + plural(p.comebacks, 'comeback') + ')' : '';
-    if (p.status === 'Champion') {
-      return name + '\nI got all ' + L + ' questions in a row right!' + cb + '\n' + squares(p.daysSurvived) + '\nCan you?\n' + url;
+  function renderWhoami() {
+    var p = state && state.player, w = $('whoami');
+    if (!p) {
+      w.innerHTML = 'Played before? <button class="link" onclick="go(\'login\')">Log in</button>';
+    } else if (p.saved) {
+      w.innerHTML = 'Playing as <b>' + esc(p.name) + '</b> &middot; <button class="link" onclick="logout()">Log out</button>';
+    } else {
+      w.innerHTML = 'Playing as <b>' + esc(p.name) + '</b> &middot; <button class="link" onclick="go(\'save\')">Pick your own name</button>' +
+        ' &middot; <button class="link" onclick="go(\'login\')">Log in</button>';
     }
-    if (p.status === 'Out') {
-      return name + '\nOut on question ' + p.outOnDay + '. Best run: ' + p.best + ' of ' + L + '.\n' +
-        squares(p.daysSurvived, p.outReason === 'Wrong answer') + '\nThink you can beat me?\n' + url;
+  }
+  function setTabs() {
+    ['endless', 'daily', 'board'].forEach(function (t) { $('tab_' + t).classList.toggle('on', view === t); });
+    var p = state && state.player;
+    var dailyTab = $('tab_daily');
+    dailyTab.innerHTML = 'Daily 10' + (!p || !p.dailyDoneToday ? '<span class="dot"></span>' : '');
+  }
+
+  // ---------- navigation ----------
+  function go(v) {
+    clearError();
+    view = v;
+    setTabs();
+    if (v !== 'endless' && v !== 'daily' && timer) { clearInterval(timer); timer = null; }
+    track('holdout_tab', { tab: v });
+    if (v === 'endless') renderEndless();
+    else if (v === 'daily') loadDaily();
+    else if (v === 'board') loadBoard();
+    else if (v === 'login') renderLogin();
+    else if (v === 'save') renderSave();
+  }
+
+  // ---------- loading ----------
+  function loadState() {
+    var asked = getToken();
+    return call('getState', asked, getRef()).then(function (s) {
+      if (asked !== getToken()) {
+        // They started playing while this was loading: keep the newer player info.
+        s.player = state && state.player; s.circle = state && state.circle;
+      } else if (!s.player && asked) setToken('');
+      state = s;
+      renderHeader();
+      setTabs();
+      return s;
+    });
+  }
+
+  // ---------- question drawing ----------
+  function choicesHtml(choices, prefix) {
+    return ['A', 'B', 'C', 'D'].map(function (L) {
+      return '<button class="choice" id="' + prefix + L + '" onclick="pick(\'' + L + '\')">' +
+        '<span class="letter">' + L + '</span><span>' + esc(choices[L]) + '</span></button>';
+    }).join('');
+  }
+  function pick(L) {
+    if (busy) return;
+    selected = L;
+    var prefix = view === 'daily' ? 'd' : 'c';
+    ['A', 'B', 'C', 'D'].forEach(function (x) { var el = $(prefix + x); if (el) el.classList.toggle('on', x === L); });
+    var b = $('lockBtn');
+    if (b) { b.disabled = false; b.textContent = 'Lock in ' + L; }
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.target && /input|select|textarea/i.test(e.target.tagName)) return;
+    var k = (e.key || '').toUpperCase();
+    if (/^[ABCD]$/.test(k) && $('lockBtn') && !busy) pick(k);
+    else if (/^[1-4]$/.test(k) && $('lockBtn') && !busy) pick('ABCD'.charAt(Number(k) - 1));
+    else if (k === 'ENTER') {
+      var b = $('lockBtn') || $('nextBtn');
+      if (b && !b.disabled) { e.preventDefault(); b.click(); }
     }
-    return name + '\nStill standing: ' + p.daysSurvived + ' of ' + L + cb + '\n' + squares(p.daysSurvived) +
-      '\nOne wrong answer ends the run.\nCan you outlast me?\n' + url;
+  });
+  function lockChoices() { document.querySelectorAll('.choice').forEach(function (c) { c.disabled = true; }); }
+  function tierNote(d) { return d ? '<span>' + esc(d) + '</span>' : ''; }
+
+  // ================= ENDLESS =================
+  function randomStarter() {
+    var seen = (read('holdout_starters_seen') || '').split(',');
+    var pool = STARTERS.filter(function (s) { return seen.indexOf(s[0]) < 0; });
+    if (!pool.length) pool = STARTERS;
+    var s = pool[Math.floor(Math.random() * pool.length)];
+    return { id: s[0], number: 1, difficulty: 'Easy', text: s[1], choices: { A: s[2], B: s[3], C: s[4], D: s[5] }, starter: true };
+  }
+
+  function renderEndless() {
+    var m = $('main'), p = state && state.player;
+    if (lastResult && !lastResult.correct) { renderRunOver(); return; }
+    if (!p) {
+      if (!q) q = randomStarter();
+      drawEndlessQuestion();
+      return;
+    }
+    if (p.status === 'Alive') {
+      if (!q && state.question) q = state.question;
+      if (q) { drawEndlessQuestion(); return; }
+    }
+    if (p.status === 'Out') { renderRunOver(); return; }
+    // Ready: start a run right away
+    m.innerHTML = '<div class="loading">Getting your first question...</div>';
+    call('startEndless', getToken()).then(function (r) {
+      state.player = r.player; q = r.question; lastResult = null;
+      renderWhoami();
+      if (q) drawEndlessQuestion(); else m.innerHTML = '<p>No questions are available right now. Please try again later.</p>';
+    }).catch(function (e) { m.innerHTML = ''; showError(e); });
+  }
+
+  function streakLine() {
+    var p = state && state.player;
+    var score = p && p.status === 'Alive' ? p.score : 0;
+    var best = p ? p.best : 0;
+    return '<div class="streakbig">Streak <b>' + score + '</b>' + (best ? ' &nbsp;&middot;&nbsp; Your best ' + best : '') + '</div>';
+  }
+
+  function drawEndlessQuestion() {
+    selected = null; busy = false;
+    var first = !state || !state.player;
+    $('main').innerHTML =
+      '<div class="qmeta">' + streakLine() + tierNote(q.difficulty) + '</div>' +
+      (q.secondChance ? '<div class="warn">Comeback question: get this one right and your run keeps going.</div>' : '') +
+      '<div class="small" style="margin-top:10px">Question ' + q.number + '</div>' +
+      '<div class="qtext">' + esc(q.text) + '</div>' +
+      choicesHtml(q.choices, 'c') +
+      '<button class="btn" id="lockBtn" disabled onclick="lockEndless()">Pick an answer</button>' +
+      '<div id="endlessResult"></div>' +
+      (first ? '<div class="comfort">Free. No sign-up. No email. Just play.<br>By playing, you confirm you are 13 or older.</div>' : '');
+  }
+
+  function lockEndless() {
+    if (!selected || busy) return;
+    busy = true;
+    var choice = selected, b = $('lockBtn');
+    b.disabled = true; b.textContent = 'Checking...';
+    lockChoices();
+    var promise;
+    if (!state || !state.player || q.starter) {
+      var st = read('holdout_starters_seen');
+      store('holdout_starters_seen', (st ? st + ',' : '') + q.id);
+      promise = call('startGuestEndless', getDevice(), getRef(), q.id, choice, q.text).then(function (r) {
+        setToken(r.token);
+        store('holdout_ref', '');
+        track('holdout_first_answer', { invited: !!getRef(), correct: !!r.correct });
+        if (!state) state = {};
+        state.player = r.player;
+        renderHeader();
+        if (r.retry) {
+          q = r.question; busy = false;
+          if (q) { drawEndlessQuestion(); $('endlessResult').innerHTML = '<p class="small">That question just changed, so here is a fresh one.</p>'; }
+          return null;
+        }
+        return r;
+      });
+    } else {
+      promise = call('answerEndless', getToken(), choice);
+    }
+    promise.then(function (r) {
+      if (!r) return;
+      showEndlessResult(r, choice);
+    }).catch(function (e) {
+      busy = false;
+      showError(e);
+      if (/refresh|start a new run/i.test(e.message || '')) { loadState().then(function () { q = state.question; lastResult = null; renderEndless(); }); return; }
+      b.disabled = false; b.textContent = 'Lock in ' + choice;
+      document.querySelectorAll('.choice').forEach(function (c) { c.disabled = false; });
+    });
+  }
+
+  function statsLine(st, correct) {
+    if (!st || st.answered < 3) return '';
+    return '<div class="small">' + pct(st.correct, st.answered) + '% of players got this one right.</div>';
+  }
+
+  function showEndlessResult(r, choice) {
+    lastResult = r;
+    state.player = r.player;
+    if (r.disclosure) state.disclosure = r.disclosure;
+    track('holdout_answer', { mode: 'endless', correct: !!r.correct, question_number: r.correct ? r.score : r.score + 1 });
+    var right = $('c' + r.correctLetter); if (right) right.classList.add('right');
+    if (!r.correct) { var w = $('c' + choice); if (w) w.classList.add('wrong'); }
+    $('lockBtn').style.display = 'none';
+    var sb = document.querySelector('.streakbig'); if (sb) sb.outerHTML = streakLine();
+    var html = '<div class="result">';
+    if (r.correct) {
+      html += '<div class="big good">Correct! ' + r.score + ' in a row</div>';
+      if (r.hallOfFame) html += '<div class="celebrate">You made the Hall of Fame!</div>';
+    } else {
+      html += '<div class="big bad">Not quite. It was ' + esc(r.correctLetter) + ', ' + esc(r.correctText) + '.</div>';
+    }
+    if (r.funFact) html += '<div class="fact">' + esc(r.funFact) + '</div>';
+    html += statsLine(r.stats);
+    html += '</div>';
+    if (r.correct) {
+      html += '<button class="btn" id="nextBtn" onclick="nextEndless()">Next question</button>';
+      if (!r.player.saved && (r.score === 5 || r.score === 15)) html += saveNudge();
+    } else {
+      html += '<button class="btn" id="nextBtn" onclick="renderRunOver()">See how you did</button>';
+      html += reportLink(r.questionId);
+    }
+    $('endlessResult').innerHTML = html;
+    renderWhoami(); setTabs();
+    var nb = $('nextBtn'); if (nb) nb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function nextEndless() {
+    var r = lastResult;
+    q = r && r.next;
+    lastResult = null;
+    if (q) drawEndlessQuestion();
+    else { q = null; loadState().then(renderEndless).catch(showError); }
+    window.scrollTo({ top: $('navtabs').offsetTop, behavior: 'smooth' });
+  }
+
+  function renderRunOver() {
+    var p = state.player, r = lastResult;
+    var score = r ? r.score : (p.outOn ? p.outOn - 1 : p.score);
+    track('holdout_run_over', { score: score });
+    var newBest = r && p.best === score && score > 0;
+    var html = '<h2>Run over</h2>' +
+      '<div class="squares">' + squares(score, true) + '</div>' +
+      '<div class="status">' + (score === 0 ? 'Tough first question!' : plural(score, 'right answer') + ' in a row') + '</div>' +
+      (newBest ? '<div class="good"><b>That is your best run yet!</b></div>' : '<div class="small">Your best: ' + p.best + '</div>') +
+      rankLine(p) +
+      '<button class="btn" id="nextBtn" onclick="newRun()">Play again</button>';
+    if (p.canComeBack) {
+      html += '<button class="btn ghost" onclick="useComeback()">Use a comeback and keep this run going (' + p.bonus + ' left)</button>';
+    }
+    if (!p.saved) html += saveNudge();
+    shareKind = 'result';
+    shareTextNow = endlessShareText(score, p.best);
+    html += shareBox('Challenge your friends');
+    html += inviteBox(p);
+    html += adHtml(r ? r.ad : state.slotAd);
+    if (r && r.questionId) html += reportLink(r.questionId);
+    else if (p.lastQuestionId) html += reportLink(p.lastQuestionId);
+    $('main').innerHTML = html;
+    window.scrollTo({ top: $('navtabs').offsetTop, behavior: 'smooth' });
+  }
+
+  function newRun() {
+    var m = $('main');
+    m.innerHTML = '<div class="loading">Getting your first question...</div>';
+    lastResult = null; q = null;
+    track('holdout_new_run');
+    call('startEndless', getToken()).then(function (r) {
+      state.player = r.player; q = r.question;
+      if (q) drawEndlessQuestion(); else m.innerHTML = '<p>No questions are available right now.</p>';
+    }).catch(function (e) { showError(e); loadState().then(renderEndless); });
+  }
+
+  function useComeback() {
+    $('main').innerHTML = '<div class="loading">Bringing you back...</div>';
+    track('holdout_comeback');
+    call('useBonus', getToken()).then(function (r) {
+      state.player = r.player; q = r.question; lastResult = null;
+      if (q) drawEndlessQuestion(); else renderEndless();
+    }).catch(function (e) { showError(e); renderRunOver(); });
+  }
+
+  // ================= DAILY =================
+  function loadDaily() {
+    var m = $('main');
+    if (!daily) m.innerHTML = '<div class="loading">Loading today\'s Daily 10...</div>';
+    call('getDaily', getToken()).then(function (d) {
+      daily = d;
+      if (view !== 'daily') return;
+      if (d.done) renderDailyDone();
+      else { dq = d.question; drawDailyQuestion(); }
+    }).catch(function (e) { m.innerHTML = ''; showError(e); });
+  }
+
+  function dailySquares(results) {
+    return (results || []).map(function (x) { return x === 'g' ? '🟩' : x === 'r' ? '🟥' : '⬜'; }).join('');
+  }
+
+  function drawDailyQuestion() {
+    selected = null; busy = false;
+    if (!dq) { $('main').innerHTML = '<p>Today\'s Daily is not ready yet. Please check back soon.</p>'; return; }
+    var d = daily;
+    var res = d.results && d.results.length ? d.results : dailySquaresEmpty(d.total);
+    $('main').innerHTML =
+      '<div class="qmeta"><div><b>Daily 10</b> &middot; ' + esc(d.label) + '</div>' + tierNote(dq.difficulty) + '</div>' +
+      '<div class="squares">' + dailySquares(res) + '</div>' +
+      (dq.number === 1 ? '<div class="small">The same 10 questions for everyone today. They get harder. One miss ends it. Answers are shown tomorrow.</div>' : '') +
+      '<div class="small" style="margin-top:10px">Question ' + dq.number + ' of ' + d.total + '</div>' +
+      '<div class="qtext">' + esc(dq.text) + '</div>' +
+      choicesHtml(dq.choices, 'd') +
+      '<button class="btn" id="lockBtn" disabled onclick="lockDaily()">Pick an answer</button>' +
+      '<div id="dailyResult"></div>';
+  }
+  function dailySquaresEmpty(n) { var a = []; for (var i = 0; i < (n || 10); i++) a.push('n'); return a; }
+
+  function ensurePlayer() {
+    if (getToken() && state && state.player) return Promise.resolve();
+    return call('createGuest', getDevice(), getRef()).then(function (r) {
+      setToken(r.token); store('holdout_ref', '');
+      return loadState();
+    });
+  }
+
+  function lockDaily() {
+    if (!selected || busy) return;
+    busy = true;
+    var choice = selected, b = $('lockBtn');
+    b.disabled = true; b.textContent = 'Checking...';
+    lockChoices();
+    ensurePlayer().then(function () { return call('answerDaily', getToken(), choice); }).then(function (r) {
+      track('holdout_answer', { mode: 'daily', correct: !!r.correct, question_number: dq.number });
+      state.player = r.player;
+      daily.results = r.results; daily.score = r.score; daily.done = r.done; daily.streak = r.streak;
+      daily.secondsToTomorrow = r.secondsToTomorrow;
+      var el = $('d' + choice);
+      if (el) el.classList.add(r.correct ? 'right' : 'wrong');
+      renderWhoami(); setTabs();
+      if (r.done) {
+        track('holdout_daily_done', { score: r.score });
+        $('dailyResult').innerHTML = '<div class="result"><div class="big ' + (r.correct ? 'good' : 'bad') + '">' +
+          (r.correct ? 'Perfect! All ' + r.total + '!' : 'That one was wrong. Daily over.') + '</div></div>';
+        setTimeout(renderDailyDone, 1100);
+      } else {
+        $('dailyResult').innerHTML = '<div class="result"><div class="big good">Right! ' + r.score + ' of ' + r.total + '</div></div>';
+        dq = r.next;
+        setTimeout(function () { if (view === 'daily') drawDailyQuestion(); }, 700);
+      }
+    }).catch(function (e) {
+      busy = false; showError(e);
+      b.disabled = false; b.textContent = 'Lock in ' + choice;
+      document.querySelectorAll('.choice').forEach(function (c) { c.disabled = false; });
+    });
+  }
+
+  function renderDailyDone() {
+    var d = daily, p = state && state.player;
+    shareKind = 'daily';
+    shareTextNow = dailyShareText(d);
+    var html = '<h2>Daily 10 &middot; ' + esc(d.label) + '</h2>' +
+      '<div class="squares">' + dailySquares(d.results) + '</div>' +
+      '<div class="status">' + d.score + ' of ' + d.total + '</div>' +
+      (d.streak ? '<div class="small">Daily streak: <b>' + plural(d.streak, 'day') + '</b> in a row</div>' : '') +
+      '<p class="small">Next Daily 10 in <span class="cd countdown" style="font-size:18px">' + fmtTime(d.secondsToTomorrow) + '</span></p>' +
+      '<button class="btn" onclick="go(\'endless\')">Keep playing: Endless</button>';
+    if (p && !p.saved) html += saveNudge();
+    html += shareBox('Share your squares');
+    if (d.yesterday && d.yesterday.questions && d.yesterday.questions.length) {
+      html += '<details class="yday"><summary>Yesterday\'s answers (' + esc(d.yesterday.label) + ')</summary><ul class="list">' +
+        d.yesterday.questions.map(function (x) {
+          return '<li>' + x.number + '. ' + esc(x.text) + '<br><b>' + esc(x.answer) + '</b>' +
+            (x.funFact ? '<span>' + esc(x.funFact) + '</span>' : '') + '</li>';
+        }).join('') + '</ul></details>';
+    }
+    $('main').innerHTML = html;
+    startCountdown(d.secondsToTomorrow);
+  }
+
+  // ================= LEADERBOARD =================
+  function loadBoard() {
+    var m = $('main');
+    if (!board) m.innerHTML = '<div class="loading">Loading the leaderboard...</div>';
+    else renderBoard();
+    call('getLeaderboard').then(function (b) { board = b; if (view === 'board') renderBoard(); }).catch(function (e) { showError(e); });
+  }
+  function nameCell(name) {
+    var me = state && state.player && state.player.name === name;
+    return '<span' + (me ? ' class="me"' : '') + '>' + esc(name) + (me ? ' (you)' : '') + '</span>';
+  }
+  function list(items, fn) { return '<ul class="list">' + items.map(fn).join('') + '</ul>'; }
+  function renderBoard() {
+    var b = board, p = state && state.player, html = '<h2>Leaderboard</h2>';
+    if (p && p.best) html += rankLine(p);
+    if (b.liveNow && b.liveNow.length) {
+      html += '<h3>Playing right now</h3>' + list(b.liveNow, function (x) {
+        return '<li>' + nameCell(x.name) + '<span>' + x.score + ' in a row' + (x.comebacks ? ' <span class="badge">' + plural(x.comebacks, 'comeback') + '</span>' : '') + '</span></li>';
+      });
+    }
+    if (b.today && b.today.length) {
+      html += '<h3>Best runs today</h3>' + list(b.today, function (x, i) {
+        return '<li><span>' + (i + 1) + '. ' + nameCell(x.name) + '</span><span>' + x.best + '</span></li>';
+      });
+    }
+    html += '<h3>Daily 10 today' + (b.dailyPlayed ? ' (' + plural(b.dailyPlayed, 'player') + ')' : '') + '</h3>';
+    html += b.daily && b.daily.length ? list(b.daily, function (x, i) {
+      return '<li><span>' + (i + 1) + '. ' + nameCell(x.name) + '</span><span>' + x.score + '/10' + (x.streak > 1 ? ' &middot; ' + x.streak + ' day streak' : '') + '</span></li>';
+    }) : '<p class="small">Nobody has played today\'s Daily 10 yet. <button class="link" onclick="go(\'daily\')">Be the first</button></p>';
+    html += '<h3>Best runs ever</h3>';
+    html += b.allTime && b.allTime.length ? list(b.allTime, function (x, i) {
+      return '<li><span>' + (i + 1) + '. ' + nameCell(x.name) + '</span><span>' + x.best + '</span></li>';
+    }) : '<p class="small">No runs yet. <button class="link" onclick="go(\'endless\')">Start one</button></p>';
+    var c = state && state.circle;
+    if (c && c.length) {
+      html += '<h3>Your circle</h3>' + list(c, function (f) {
+        var st = 'best ' + f.best + (f.playing != null ? ' &middot; on ' + f.playing + ' now' : '') + (f.dailyToday != null ? ' &middot; Daily ' + f.dailyToday + '/10' : '');
+        return '<li><span>' + esc(f.name) + ' <span class="small">(' + esc(f.relation) + ')</span></span><span>' + st + '</span></li>';
+      });
+    }
+    if (b.recruiters && b.recruiters.length) {
+      html += '<h3>Top recruiters</h3>' + list(b.recruiters, function (x) {
+        return '<li>' + nameCell(x.name) + '<span>' + plural(x.friends, 'friend') + '</span></li>';
+      });
+    }
+    html += '<h3>Hall of Fame (' + (b.hallAt || 30) + ' in a row)</h3>';
+    html += b.hall && b.hall.length ? list(b.hall, function (h) {
+      return '<li>' + nameCell(h.name) + '<span>' + esc(h.date) + (h.comebacks ? ' <span class="badge">' + plural(h.comebacks, 'comeback') + '</span>' : '') + '</span></li>';
+    }) : '<p class="small">Nobody yet. Be the first to get ' + (b.hallAt || 30) + ' in a row.</p>';
+    if (p) html += inviteBox(p);
+    $('main').innerHTML = html;
+  }
+  function rankLine(p) {
+    if (!p || !p.best || !p.totalPlayers || p.totalPlayers < 2) return '';
+    return '<div class="rank">Your best run of <b>' + p.best + '</b> ranks <b>#' + p.rank + '</b> of ' + p.totalPlayers + ' players.</div>';
+  }
+
+  // ================= ACCOUNTS =================
+  function saveNudge() {
+    return '<div class="savebox"><b>Keep your spot on the leaderboard</b>' +
+      '<div class="small">You are playing as ' + esc(state.player.name) + '. Pick your own name and a PIN so you can come back on any device.</div>' +
+      '<button class="btn ghost" onclick="go(\'save\')">Pick my name</button></div>';
+  }
+  function renderSave() {
+    var p = state && state.player;
+    if (!p) { go('endless'); return; }
+    $('main').innerHTML = '<h2>Pick your name</h2>' +
+      '<p class="small">Your streaks and scores stay with you. Use the name and PIN to log in on another phone or computer. No email needed.</p>' +
+      '<label for="sName">Display name (shown on the leaderboard, not your full real name)</label>' +
+      '<input type="text" id="sName" maxlength="20" autocomplete="nickname" value="' + esc(p.saved ? p.name : '') + '" placeholder="Example: TriviaTom">' +
+      '<label for="sPin">PIN (4 to 6 numbers)</label>' +
+      '<input type="password" id="sPin" inputmode="numeric" maxlength="6" autocomplete="new-password">' +
+      '<label class="check"><input type="checkbox" id="s13"> <span>I am 13 years old or older.</span></label>' +
+      '<div class="row2"><button class="btn ghost" onclick="go(\'endless\')">Not now</button>' +
+      '<button class="btn" id="saveBtn" onclick="doSave()">Save</button></div>';
+  }
+  function doSave() {
+    var b = $('saveBtn');
+    b.disabled = true; b.textContent = 'Saving...';
+    call('saveAccount', getToken(), $('sName').value, $('sPin').value, $('s13').checked).then(function (r) {
+      state.player = r.player;
+      track('sign_up', { method: 'name_pin' });
+      renderWhoami();
+      $('main').innerHTML = '<h2>Saved!</h2><p>You are <b>' + esc(r.player.name) + '</b>. Log in with that name and your PIN on any device.</p>' +
+        '<button class="btn" onclick="go(\'endless\')">Keep playing</button>';
+    }).catch(function (e) { showError(e); b.disabled = false; b.textContent = 'Save'; });
+  }
+  function renderLogin() {
+    var p = state && state.player;
+    $('main').innerHTML = '<h2>Log in</h2>' +
+      (p && !p.saved ? '<p class="warn">You are playing as ' + esc(p.name) + '. Logging in to a different account switches you away from it.</p>' : '') +
+      '<label for="lName">Display name</label>' +
+      '<input type="text" id="lName" maxlength="20" autocomplete="username">' +
+      '<label for="lPin">PIN</label>' +
+      '<input type="password" id="lPin" inputmode="numeric" maxlength="6" autocomplete="current-password">' +
+      '<div class="row2"><button class="btn ghost" onclick="go(\'endless\')">Back</button>' +
+      '<button class="btn" id="loginBtn" onclick="doLogin()">Log in</button></div>' +
+      '<p class="small">Never picked a name and PIN? Then there is nothing to log in to. Just play.</p>';
+  }
+  function doLogin() {
+    var b = $('loginBtn');
+    b.disabled = true; b.textContent = 'Logging in...';
+    call('login', $('lName').value, $('lPin').value, getDevice()).then(function (r) {
+      setToken(r.token);
+      track('login');
+      q = null; lastResult = null; daily = null;
+      return loadState().then(function () { go('endless'); });
+    }).catch(function (e) { showError(e); b.disabled = false; b.textContent = 'Log in'; });
+  }
+  function logout() {
+    setToken(''); state.player = null; q = null; lastResult = null; daily = null;
+    loadState().then(function () { go('endless'); }).catch(showError);
+  }
+
+  // ================= SHARING =================
+  function squares(n, red) {
+    var out = '';
+    var show = Math.min(n, 30);
+    for (var i = 0; i < show; i++) { out += '🟩'; if ((i + 1) % 10 === 0 && i + 1 < show) out += '\n'; }
+    if (n > 30) out += ' +' + (n - 30);
+    if (red) out += '🟥';
+    return out;
+  }
+  function shareLink() { var p = state && state.player; return (p && p.inviteUrl) || (state && state.shareUrl) || 'https://holdouttrivia.com'; }
+  function endlessShareText(score, best) {
+    var name = ((state && state.gameName) || 'Holdout').toUpperCase();
+    return name + '\nI got ' + score + ' in a row' + (best > score ? ' (my best is ' + best + ')' : '') + '\n' +
+      squares(score, true) + '\nHow many can you get?\n' + shareLink();
+  }
+  function dailyShareText(d) {
+    var name = ((state && state.gameName) || 'Holdout').toUpperCase();
+    return name + ' DAILY 10 · ' + d.label + '\n' + dailySquares(d.results) + ' ' + d.score + '/' + d.total +
+      (d.streak > 1 ? '\nStreak: ' + d.streak + ' days' : '') + '\n' + shareLink();
   }
   function shareBox(label) {
-    if (!state.player || state.player.daysSurvived < 1) return '';
-    return '<div class="sharebox"><b>' + esc(label || 'Share my result') + '</b>' +
-      '<pre id="shareText">' + esc(shareText()) + '</pre>' +
+    return '<div class="sharebox"><b>' + esc(label) + '</b>' +
+      '<pre id="shareText">' + esc(shareTextNow) + '</pre>' +
       (navigator.share ? '<button class="btn" onclick="shareTo(\'phone\')">Share...</button>' : '') +
       '<div class="sharegrid">' +
         '<button onclick="shareTo(\'facebook\')"><span class="ico fb">f</span>Facebook</button>' +
@@ -333,7 +859,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       '<div id="shareNote" class="small center"></div>' +
       '<div class="small center">No answers are included, so it is spoiler-free.</div></div>';
   }
-  function shareLink() { var p = state.player; return (p && p.inviteUrl) || state.shareUrl || ''; }
   function shareNote(msg) { var n = $('shareNote'); if (n) n.textContent = msg; }
   // Opens Facebook or X in one pop-up window. (Never also moves the game page itself.)
   function openWin(url) {
@@ -342,7 +867,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     shareNote('Your browser blocked the pop-up. Allow pop-ups for this site, or use Copy and paste it in.');
   }
   function sendEmail(service) {
-    var subject = 'Can you outlast me on Holdout?', body = shareText();
+    var subject = 'How many can you get right in a row?', body = shareTextNow;
     var s = encodeURIComponent(subject), b = encodeURIComponent(body);
     if (service === 'gmail') openWin('https://mail.google.com/mail/?view=cm&fs=1&su=' + s + '&body=' + b);
     else if (service === 'outlook') openWin('https://outlook.live.com/mail/0/deeplink/compose?subject=' + s + '&body=' + b);
@@ -350,14 +875,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     else window.location.href = 'mailto:?subject=' + s + '&body=' + b;
   }
   function shareTo(where) {
-    var text = shareText(), url = shareLink();
+    var text = shareTextNow, url = shareLink();
     var short = text.replace(url, '').trim();
     call('logShare', where).catch(function () {});
-    track('share', { method: where, content_type: 'result' });
+    track('share', { method: where, content_type: shareKind });
     if (where === 'phone') {
       navigator.share({ text: text }).catch(function () {});
     } else if (where === 'facebook') {
-      // Facebook only lets websites share a link; your squares are copied so you can paste them into the post.
       copyText(text, function () {});
       openWin('https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url));
       shareNote('Your result is copied. Paste it into the Facebook post if you want the squares to show.');
@@ -370,7 +894,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         shareNote('Copied! Instagram doesn\'t let websites post for you, so paste it into a story, post, or message in the Instagram app.');
       }
     } else if (where === 'email') {
-      // Let people pick their email, since many computers have no email app set up
       var n = $('shareNote');
       if (n) n.innerHTML = '<div class="emailpick">Send with: ' +
         '<button onclick="sendEmail(\'gmail\')">Gmail</button>' +
@@ -398,17 +921,29 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     document.body.removeChild(t);
   }
 
-  // ---------- rank ----------
-  function rankLine(p) {
-    if (!p.best || !p.totalPlayers || p.totalPlayers < 2) return '';
-    return '<div class="rank">Your best run of <b>' + p.best + '</b> ranks <b>#' + p.rank + '</b> of ' + p.totalPlayers + ' players.</div>';
+  // ---------- invite box ----------
+  function inviteBox(p) {
+    if (!p || !p.inviteUrl) return '';
+    return '<div class="invitebox">' +
+      '<b>Earn comebacks</b>' +
+      '<div class="small">Send your link to a friend. When they answer 3 questions, you get a comeback to keep a run going after a wrong answer.</div>' +
+      '<div class="linkrow"><input type="text" id="inviteLink" readonly value="' + esc(p.inviteUrl) + '" onclick="this.select()">' +
+      '<button id="copyBtn" onclick="copyInvite()">Copy</button></div>' +
+      '<div class="bonuscount">Comebacks saved: <b>' + p.bonus + '</b> &middot; Friends who played: ' + p.friendsInvited + '</div>' +
+      '</div>';
+  }
+  function copyInvite() {
+    var input = $('inviteLink');
+    if (!input) return;
+    track('share', { method: 'invite_link', content_type: 'invite' });
+    copyText(input.value, function () { var b = $('copyBtn'); if (b) b.textContent = 'Copied!'; });
   }
 
   // ---------- report a question ----------
   function reportLink(qid) {
     if (!qid) return '';
     if (read('holdout_reported_' + qid)) return '<p class="small">You reported this question. Thanks!</p>';
-    return '<div id="rep_' + qid + '"><p class="small"><button class="link" onclick="openReport(\'' + qid + '\')">Think this question was unfair? Report it</button></p></div>';
+    return '<div id="rep_' + qid + '"><p class="small"><button class="link" onclick="openReport(\'' + qid + '\')">Think this question was wrong? Report it</button></p></div>';
   }
   function openReport(qid) {
     $('rep_' + qid).innerHTML = '<div class="reportbox">' +
@@ -428,40 +963,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     }).catch(showError);
   }
 
-  // ---------- your circle ----------
-  function renderCircle() {
-    var card = $('circleCard'), p = state.player;
-    if (!p) { card.style.display = 'none'; return; }
-    var c = state.circle || [];
-    card.style.display = 'block';
-    if (!c.length) {
-      card.innerHTML = '<h2>Your circle</h2><p class="small">Friends you invite, and whoever invited you, show up here so you can keep an eye on each other.</p>';
-      return;
-    }
-    card.innerHTML = '<h2>Your circle</h2><ul class="list">' + c.map(function (f) {
-      var st = f.status === 'Alive' ? f.survived + ' of ' + state.length + (f.answeredToday ? ' &#10003;' : '')
-        : f.status === 'Champion' ? 'Champion!' : 'Out (best ' + f.best + ')';
-      return '<li><span>' + esc(f.name) + ' <span class="small">(' + esc(f.relation) + ')</span></span><span>' + st + '</span></li>';
-    }).join('') + '</ul><p class="small">&#10003; means they already answered today.</p>';
-  }
-
-  // ---------- invite box ----------
-  function inviteBox(p, headline, sub) {
-    if (!p.inviteUrl) return '';
-    return '<div class="invitebox">' +
-      '<b>' + esc(headline) + '</b>' +
-      '<div class="small">' + esc(sub) + '</div>' +
-      '<div class="linkrow"><input type="text" id="inviteLink" readonly value="' + esc(p.inviteUrl) + '" onclick="this.select()">' +
-      '<button id="copyBtn" onclick="copyInvite()">Copy</button></div>' +
-      '<div class="bonuscount">Comeback bonuses saved: <b>' + p.bonus + '</b> &middot; Friends invited: ' + p.friendsInvited + '</div>' +
-      '</div>';
-  }
-  function copyInvite() {
-    var input = $('inviteLink');
-    if (!input) return;
-    copyText(input.value, function () { var b = $('copyBtn'); if (b) b.textContent = 'Copied!'; });
-  }
-
   // ---------- Amazon picks ----------
   function adHtml(ad) {
     if (!ad || !ad.url || !/^https:\/\/(www\.)?(amazon\.com|amzn\.to|a\.co)\//i.test(ad.url)) return '';
@@ -474,360 +975,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       '</div>';
   }
 
-  // ---------- loading ----------
-  function loadAll() {
-    clearError();
-    call('getState', getToken(), getRef()).then(function (s) {
-      state = s;
-      if (getToken() && !s.player) clearToken();
-      renderHeader();
-      renderMain();
-      renderReveal();
-      renderCircle();
-      $('footerDisclosure').style.display = s.disclosure ? 'block' : 'none';
-      startCountdown(s.countdown);
-    }).catch(showError);
-    loadBoard();
-  }
-  function loadBoard() {
-    call('getLeaderboard').then(renderBoard).catch(showError);
-  }
-
-  // ---------- header ----------
-  function renderHeader() {
-    $('gameName').textContent = state.gameName;
-    document.title = state.gameName;
-    $('tagline').textContent = state.tagline;
-    var p = state.player;
-    var mine = '';
-    if (p && p.status === 'Alive') mine = '<span class="pill">You: <b>' + p.daysSurvived + '</b> of ' + state.length + ' in a row</span>';
-    $('pills').innerHTML = mine +
-      '<span class="pill">New question daily at ' + esc(resetTime()) + '</span>' +
-      '<span class="pill" id="alivePill" style="display:none"></span>';
-    if (lastBoard) renderBoard(lastBoard);
-  }
-
-  // The daily reset shown in the player's own time zone
-  function resetTime() {
-    try {
-      return new Date(Date.now() + state.countdown * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    } catch (e) { return 'midnight'; }
-  }
-
-  // ---------- main card ----------
-  function renderMain() {
-    var main = $('main');
-    var p = state.player;
-    main.className = 'card';
-    if (!p) { renderVisitor(); return; }
-
-    var html = '<div class="small">Playing as <b>' + esc(p.name) + '</b>' +
-      (p.attempt > 1 ? ' &middot; Run #' + p.attempt : '') +
-      ' &middot; Best: ' + p.best + ' of ' + state.length + ' &nbsp; ' +
-      '<button class="link" onclick="logout()">Log out</button></div>';
-
-    if (p.status === 'Alive') {
-      var pct = Math.round(100 * p.daysSurvived / state.length);
-      html += '<div class="progress"><div style="width:' + pct + '%"></div></div>' +
-        '<div class="small">' + p.daysSurvived + ' of ' + state.length + ' correct in a row &middot; Pause days left: <b>' + p.pausesLeft + '</b>' +
-        (p.comebacks ? ' &middot; ' + plural(p.comebacks, 'comeback') : '') + '</div><br>';
-
-      if (state.question) {
-        var q = state.question;
-        html += '<div class="timeleft">Answer by midnight: <b class="cd">' + fmtTime(state.countdown) + '</b></div>' +
-          '<div class="small">Question ' + q.number + ' of ' + state.length + ' &middot; ' +
-            (q.secondChance ? 'Second chance question' : esc(q.difficulty)) + '</div>' +
-          '<div class="qtext">' + esc(q.text) + '</div>' + choicesHtml(q.choices) +
-          '<button class="btn" id="lockBtn" disabled onclick="lockIn()">Pick an answer</button>' +
-          '<div class="warn">One wrong answer ends your run. Choose carefully.</div>' +
-          '<p class="small">Can\'t play today? Skipping a day uses a pause day, and your question waits for you.</p>';
-      } else if (state.questionMissing) {
-        html += '<div class="status">Your next question is on its way</div><p>Check back a little later.</p>';
-      } else {
-        html += '<div class="status good">You\'re still standing!</div>' +
-          '<p>Your next question unlocks at midnight, in:</p>' +
-          '<div class="countdown cd">' + fmtTime(state.countdown) + '</div>' +
-          rankLine(p) + calendarLink() + shareBox('Challenge my friends') +
-          inviteBox(p, 'Save up a comeback', 'If you ever get knocked out, a friend joining with your link lets you continue where you left off instead of starting over.');
-      }
-
-    } else if (p.status === 'Champion') {
-      html += '<div class="status good">You got all ' + state.length + ' in a row!</div>' +
-        '<p>You are in the Hall of Fame. Want to see if you can do it again?</p>' + rankLine(p) +
-        shareBox('Share my win') +
-        '<button class="btn" id="runBtn" onclick="doNewRun()">Start a new run</button>' +
-        inviteBox(p, 'Bring your friends in', 'Each friend who joins with your link saves you a comeback for a future run.');
-
-    } else { // Out
-      var why = /^Missed/.test(p.outReason) ? 'You ran out of pause days.'
-        : p.outReason === 'Removed by admin' ? 'This run was ended by the game organizer.'
-        : 'Your answer on question ' + p.outOnDay + ' was wrong.';
-      html += '<div class="status bad">Your run ended on question ' + p.outOnDay + '</div>' +
-        '<p>' + esc(why) + ' Your best is ' + p.best + ' of ' + state.length + '.</p>' + rankLine(p) +
-        (p.outReason === 'Wrong answer' ? reportLink(p.lastQuestionId) : '');
-      if (p.canRestart) {
-        html += '<button class="btn" id="runBtn" onclick="doNewRun()">Start a new run' +
-          (p.restartIsInstant ? ' now' : ' (first question at midnight)') + '</button>';
-      }
-      if (p.canComeBack) {
-        html += '<button class="btn ghost" id="bonusBtn" onclick="doBonus()">Use a comeback: continue from question ' + p.outOnDay + '</button>' +
-          '<p class="small">You keep your ' + plural(p.daysSurvived, 'correct answer') + ' and get a different question for question ' + p.outOnDay + '.</p>';
-      } else if (p.bonus > 0) {
-        html += '<p class="small">You have used your ' + state.bonusLimit + ' comebacks for today. You can use one tomorrow, or start a new run now.</p>';
-      } else if (p.outReason !== 'Removed by admin') {
-        html += '<p class="small">Want to keep your ' + plural(p.daysSurvived, 'correct answer') + ' instead of starting over? When a friend joins with your link, you can continue from question ' + p.outOnDay + '.</p>';
-      }
-      html += shareBox('Share my result') + inviteBox(p, 'Your invite link', 'Each friend who joins with it earns you one comeback.');
-    }
-
-    if (state.ads && state.ads.slot) html += adHtml(state.ads.slot);
-    main.innerHTML = html;
-    selected = null;
-  }
-
-  function choicesHtml(choices) {
-    return ['A', 'B', 'C', 'D'].map(function (L) {
-      return '<button class="choice" id="ch' + L + '" onclick="pick(\'' + L + '\')">' +
-        '<span class="letter">' + L + '</span><span>' + esc(choices[L]) + '</span></button>';
-    }).join('');
-  }
-
-  // A daily reminder people can add to their own calendar (no email needed)
-  function calendarLink() {
-    return '<p class="small center"><button class="link" onclick="downloadReminder()">Add a daily reminder to my calendar</button></p>';
-  }
-  function downloadReminder() {
-    var d = new Date(); d.setDate(d.getDate() + 1);
-    function p(n) { return (n < 10 ? '0' : '') + n; }
-    var day = d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate());
-    var url = state.shareUrl || '';
-    var ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Holdout//EN', 'BEGIN:VEVENT',
-      'UID:holdout-' + Date.now() + '@holdout', 'DTSTAMP:' + day + 'T080000',
-      'DTSTART:' + day + 'T080000', 'DURATION:PT5M', 'RRULE:FREQ=DAILY',
-      'SUMMARY:Holdout: answer today\'s question', 'DESCRIPTION:' + url, 'URL:' + url,
-      'BEGIN:VALARM', 'TRIGGER:PT0M', 'ACTION:DISPLAY', 'DESCRIPTION:Holdout time', 'END:VALARM',
-      'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
-    a.download = 'holdout-reminder.ics';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  }
-
-  // ---------- visitors: play first, sign up after ----------
-  function renderVisitor() {
-    var invited = state.referrerName && getRef()
-      ? '<p style="margin-top:0"><b>' + esc(state.referrerName) + '</b> invited you to play!</p>' : '';
-    var g = getGuest();
-    if (authMode === 'login') { renderLogin(); return; }
-    if (g && g.done) {
-      $('main').innerHTML = invited + (g.correct
-        ? '<div class="status good">Correct! You\'re in.</div>' +
-          '<p>Save your spot so it counts as question 1 of ' + state.length + '. Your next question unlocks at midnight.</p>'
-        : '<div class="status bad">Not this time.</div>' +
-          '<p>That\'s how fast it can end in Holdout. Join now and your first real question is ready right away.</p>') +
-        joinForm(g.correct ? 'Save my spot' : 'Join and start my run') +
-        '<p class="small center"><button class="link" onclick="setMode(\'login\')">Already playing? Log in</button></p>';
-      return;
-    }
-    $('main').innerHTML = invited +
-      '<div class="small">Try it now, no sign-up needed</div>' +
-      '<div id="guestArea"><div class="loading">Loading a question...</div></div>' +
-      '<p class="small center"><button class="link" onclick="setMode(\'login\')">Already playing? Log in</button></p>';
-    var load = guestQ ? Promise.resolve(guestQ) : call('getGuestQuestion');
-    load.then(function (q) {
-      guestQ = q;
-      $('guestArea').innerHTML = '<div class="qtext">' + esc(q.text) + '</div>' + choicesHtml(q.choices) +
-        '<button class="btn" id="lockBtn" disabled onclick="guestLockIn()">Pick an answer</button>' +
-        '<div class="warn">Get it right to stay in. A wrong answer ends your run.</div>';
-    }).catch(function (e) { $('guestArea').innerHTML = ''; showError(e); });
-  }
-  function guestLockIn() {
-    if (!selected || !guestQ) return;
-    var b = $('lockBtn'); b.disabled = true; b.textContent = 'Checking...';
-    document.querySelectorAll('.choice').forEach(function (c) { c.disabled = true; });
-    var choice = selected;
-    call('guestAnswer', guestQ.id, choice).then(function (r) {
-      setGuest({ id: guestQ.id, choice: choice, correct: !!r.correct, done: true });
-      track('holdout_visitor_answer', { correct: !!r.correct });
-      renderVisitor();
-    }).catch(function (e) { showError(e); b.disabled = false; b.textContent = 'Lock in ' + choice; });
-  }
-  function joinForm(btnText) {
-    return '<label for="jName">Display name (shown on the leaderboard)</label>' +
-      '<input type="text" id="jName" maxlength="20" autocomplete="nickname" placeholder="Example: TriviaTom">' +
-      '<label for="jPin">Pick a PIN (4 to 6 numbers)</label>' +
-      '<input type="password" id="jPin" inputmode="numeric" maxlength="6" autocomplete="new-password">' +
-      '<div class="small">Remember your name and PIN. You will need them to play on another phone or computer.</div>' +
-      '<label class="check"><input type="checkbox" id="j13"> <span>I am 13 years old or older.</span></label>' +
-      '<button class="btn" id="joinBtn" onclick="doJoin()">' + esc(btnText) + '</button>';
-  }
-  function renderLogin() {
-    $('main').innerHTML = '<h2>Log in</h2>' +
-      '<label for="lName">Display name</label>' +
-      '<input type="text" id="lName" maxlength="20" autocomplete="username">' +
-      '<label for="lPin">PIN</label>' +
-      '<input type="password" id="lPin" inputmode="numeric" maxlength="6" autocomplete="current-password">' +
-      '<button class="btn" id="loginBtn" onclick="doLogin()">Log in</button>' +
-      '<p class="small center"><button class="link" onclick="setMode(\'join\')">New here? Try a question</button></p>';
-  }
-  function setMode(m) { authMode = m; clearError(); renderMain(); }
-
-  // ---------- actions ----------
-  function doJoin() {
-    clearError();
-    var btn = $('joinBtn'), label = btn.textContent;
-    btn.disabled = true; btn.textContent = 'Joining...';
-    var g = getGuest();
-    call('join', $('jName').value, $('jPin').value, $('j13').checked, getRef(), getDevice(),
-      g && g.done ? { id: g.id, choice: g.choice } : null).then(function (r) {
-      track('sign_up', { method: 'name_pin', invited: !!getRef() });
-      setToken(r.token);
-      store('holdout_ref', '');
-      setGuest(null);
-      try { history.replaceState(null, '', window.location.pathname); } catch (e) {}
-      loadAll();
-    }).catch(function (e) {
-      btn.disabled = false; btn.textContent = label; showError(e);
-    });
-  }
-  function doLogin() {
-    clearError();
-    var btn = $('loginBtn'); btn.disabled = true; btn.textContent = 'Logging in...';
-    call('login', $('lName').value, $('lPin').value, getDevice()).then(function (r) {
-      setToken(r.token);
-      setGuest(null);
-      loadAll();
-    }).catch(function (e) {
-      btn.disabled = false; btn.textContent = 'Log in'; showError(e);
-    });
-  }
-  function doBonus() {
-    clearError();
-    var btn = $('bonusBtn'); if (btn) { btn.disabled = true; btn.textContent = 'Bringing you back...'; }
-    track('holdout_comeback');
-    call('useBonus', getToken()).then(loadAll).catch(function (e) { showError(e); loadAll(); });
-  }
-  function doNewRun() {
-    clearError();
-    var btn = $('runBtn'); if (btn) { btn.disabled = true; btn.textContent = 'Starting...'; }
-    track('holdout_new_run');
-    call('newRun', getToken()).then(loadAll).catch(function (e) { showError(e); loadAll(); });
-  }
-  function logout() { clearToken(); authMode = 'login'; loadAll(); }
-
-  function pick(L) {
-    selected = L;
-    ['A', 'B', 'C', 'D'].forEach(function (x) { var el = $('ch' + x); if (el) el.classList.toggle('on', x === L); });
-    var b = $('lockBtn'); b.disabled = false; b.textContent = 'Lock in ' + L;
-  }
-  function lockIn() {
-    if (!selected) return;
-    clearError();
-    var b = $('lockBtn'); b.disabled = true; b.textContent = 'Checking...';
-    document.querySelectorAll('.choice').forEach(function (c) { c.disabled = true; });
-    if (timer) clearInterval(timer);
-    call('submitAnswer', getToken(), selected).then(function (r) {
-      track('holdout_answer', { result: r.result, question_number: r.questionNumber, champion: !!r.champion });
-      // update the share text with the new result
-      var p = state.player;
-      p.daysSurvived = r.daysSurvived;
-      p.best = Math.max(p.best, r.daysSurvived);
-      if (r.result === 'wrong') { p.status = 'Out'; p.outOnDay = r.questionNumber; p.outReason = 'Wrong answer'; }
-      if (r.champion) p.status = 'Champion';
-      var main = $('main');
-      if (r.result === 'correct' && r.champion) {
-        main.innerHTML = '<div class="center"><div class="status good">You did it!</div>' +
-          '<p>All ' + r.length + ' in a row. Welcome to the Hall of Fame!</p></div>' + shareBox('Share my win');
-      } else if (r.result === 'correct') {
-        main.innerHTML = '<div class="center"><div class="status good">Correct!</div>' +
-          '<p>That\'s ' + r.daysSurvived + ' in a row. Your next question unlocks at midnight, in:</p>' +
-          '<div class="countdown cd">' + fmtTime(r.secondsToNext) + '</div>' +
-          '<p class="small">The answer is revealed after midnight, so keep it to yourself.</p></div>' + shareBox('Challenge my friends');
-        startCountdown(r.secondsToNext);
-      } else if (r.result === 'wrong') {
-        main.innerHTML = '<div class="center"><div class="status bad">Run over at question ' + r.questionNumber + '</div>' +
-          '<p>Your best: ' + p.best + ' of ' + r.length + '. The answer unlocks after midnight.</p></div>' +
-          '<button class="btn" onclick="loadAll()">See my options</button>' + shareBox('Share my result');
-      } else {
-        main.innerHTML = '<div class="center"><div class="status bad">Out of pause days</div>' +
-          '<p>Your run ended because too many days went by without an answer.</p></div>' +
-          '<button class="btn" onclick="loadAll()">See my options</button>';
-      }
-      if (r.disclosure) state.disclosure = r.disclosure;
-      if (r.ad) main.innerHTML += adHtml(r.ad);
-      loadBoard();
-    }).catch(function (e) {
-      showError(e);
-      loadAll();
-    });
-  }
-
-  // ---------- previous answer ----------
-  function renderReveal() {
-    var card = $('revealCard');
-    var r = state.reveal;
-    if (!r) { card.style.display = 'none'; return; }
-    var show = r.answered >= 5;
-    var pct = r.answered ? Math.round(100 * r.correct / r.answered) : 0;
-    card.style.display = 'block';
-    card.innerHTML = '<h2>Your last question</h2>' +
-      '<div>' + esc(r.text) + '</div>' +
-      '<div class="answer">' + esc(r.correctLetter) + '. ' + esc(r.correctText) + '</div>' +
-      (r.funFact ? '<div class="small">' + esc(r.funFact) + '</div>' : '') +
-      (show ? '<p class="small">' + pct + '% of ' + r.answered + ' players got this one right.</p>' : '') +
-      reportLink(r.id) +
-      (state.ads && state.ads.reveal ? adHtml(state.ads.reveal) : '');
-  }
-
-  // ---------- leaderboard ----------
-  function renderBoard(b) {
-    lastBoard = b;
-    var pill = $('alivePill');
-    if (pill && b.total) {
-      pill.style.display = 'inline-block';
-      pill.innerHTML = '<b>' + b.alive.length + '</b> of ' + b.total + ' still standing';
-    }
-    var html = '<h3>Still standing (' + b.alive.length + ')</h3>';
-    if (b.alive.length) {
-      html += '<ul class="list">' + b.alive.map(function (p) {
-        return '<li><span>' + (p.answeredToday ? '&#10003; ' : '') + esc(p.name) +
-          (p.comebacks ? ' <span class="badge">' + plural(p.comebacks, 'comeback') + '</span>' : '') + '</span>' +
-          '<span>' + p.survived + ' of ' + b.length + '</span></li>';
-      }).join('') + '</ul>' +
-        '<p class="small">&#10003; means they already answered today.</p>';
+  // ================= START =================
+  (function start() {
+    var hash = (location.hash || '').replace('#', '');
+    if (!getToken()) {
+      // Brand-new visitor: show a question immediately, load everything else quietly.
+      if (hash === 'daily' || hash === 'board') go(hash); else { q = randomStarter(); drawEndlessQuestion(); }
+      track('holdout_first_view', { invited: !!getRef() });
+      loadState().catch(function () {});
     } else {
-      html += '<p class="small">Nobody yet. Be the first to join!</p>';
+      $('main').innerHTML = '<div class="loading">Loading...</div>';
+      loadState().then(function () {
+        go(hash === 'daily' || hash === 'board' ? hash : 'endless');
+      }).catch(function (e) { $('main').innerHTML = ''; showError(e); });
     }
-    if (b.out.length) {
-      html += '<h3>Knocked out (' + b.out.length + ')</h3><ul class="list">' +
-        b.out.map(function (p) {
-          return '<li><span>' + esc(p.name) + '</span><span>Out on question ' + p.outOnDay +
-            (/^Missed/.test(p.reason) ? ' (missed days)' : '') + ' &middot; best ' + p.best + '</span></li>';
-        }).join('') + '</ul>';
-    }
-    if (b.bestRuns && b.bestRuns.length) {
-      html += '<h3>Best runs ever</h3><ul class="list">' + b.bestRuns.map(function (r, i) {
-        return '<li><span>' + (i + 1) + '. ' + esc(r.name) + (r.status === 'Champion' ? ' &#9733;' : '') + '</span><span>' + r.best + ' of ' + b.length + '</span></li>';
-      }).join('') + '</ul>';
-    }
-    if (b.recruiters && b.recruiters.length) {
-      html += '<h3>Top recruiters</h3><ul class="list">' + b.recruiters.map(function (r) {
-        return '<li><span>' + esc(r.name) + '</span><span>' + plural(r.friends, 'friend') + ' invited</span></li>';
-      }).join('') + '</ul>';
-    }
-    $('board').innerHTML = html;
-
-    if (b.hall && b.hall.length) {
-      $('hallCard').style.display = 'block';
-      $('hall').innerHTML = '<ul class="list">' + b.hall.map(function (h) {
-        return '<li><span>&#9733; ' + esc(h.name) + (h.attempt > 1 ? ' (run #' + h.attempt + ')' : '') +
-          (h.comebacks ? ' <span class="badge">' + plural(h.comebacks, 'comeback') + '</span>' : '') + '</span>' +
-          '<span>' + esc(h.date) + '</span></li>';
-      }).join('') + '</ul>';
-    }
-  }
-
-  loadAll();
+  })();
 </script>
 </body>
 </html>

@@ -114,11 +114,11 @@
     <div class="row" style="margin-bottom:10px">
       <input type="text" class="search" id="pSearch" placeholder="Search by name" oninput="renderPlayers()">
       <select id="pFilter" onchange="renderPlayers()">
-        <option value="">Everyone</option><option>Alive</option><option>Out</option><option>Champion</option>
+        <option value="">Everyone</option><option>Alive</option><option>Out</option><option>Ready</option><option value="saved">Picked a name</option><option value="auto">Still on a fun name</option>
         <option value="bonus">Has bonus questions</option><option value="recruiter">Invited friends</option>
       </select>
       <select id="pSort" onchange="renderPlayers()">
-        <option value="survived">Sort: days survived</option><option value="joined">Sort: newest</option>
+        <option value="survived">Sort: current streak</option><option value="best">Sort: best run</option><option value="answers">Sort: total answers</option><option value="joined">Sort: newest</option>
         <option value="friends">Sort: friends invited</option><option value="name">Sort: name</option>
       </select>
       <span class="muted" id="pCount"></span>
@@ -185,13 +185,18 @@
     <div class="help">Everyone knocked out by that question is set back to Alive, it counts as correct, and their next question is available right away. Then turn the question off on the Questions tab.</div>
   </div>
   <div class="card">
-    <h2>Give everyone a bonus question</h2>
-    <button class="btn" onclick="giveEveryone()">Give every player 1 bonus</button>
+    <h2>Add 300 questions from the Open Trivia Database</h2>
+    <button class="btn" id="importBtn" onclick="importOTDB()">Import 300 questions</button>
+    <div class="help">Free questions from opentdb.com (CC BY-SA 4.0, credited on the website). Tricky, outdated, and pop-culture questions are skipped. Takes about a minute. They show up on the Questions tab marked Open Trivia DB, so you can turn off any you don't like.</div>
+  </div>
+  <div class="card">
+    <h2>Give everyone a comeback</h2>
+    <button class="btn" onclick="giveEveryone()">Give every player 1 comeback</button>
     <div class="help">Good for a holiday or a "sorry for the bad question" gift.</div>
   </div>
   <div class="card">
     <h2>Run checks now</h2>
-    <button class="btn" onclick="runChecks()">Run missed-day and cheat checks</button>
+    <button class="btn" onclick="runChecks()">Run cheat checks</button>
     <div class="help">These also run by themselves every hour.</div>
   </div>
   <div class="card">
@@ -268,15 +273,15 @@
     var s = D.stats;
     var pct = s.answersToday ? Math.round(100 * s.correctToday / s.answersToday) : 0;
     var items = [
-      [s.total, 'Total players'], [s.alive, 'Still standing'], [s.out, 'Knocked out'], [s.champions, 'Champions right now'],
-      [s.joinedToday, 'Joined today'], [s.answersToday, 'Answers today'], [pct + '%', 'Correct today'],
-      [s.friendsInvited, 'Friends invited (all time)'], [s.bonusesWaiting, 'Bonus questions waiting'],
-      [s.hallOfFame, 'Hall of Fame finishes'], [s.guestToday, 'Visitor tries today'], [s.newAlerts, 'New cheat alerts', s.newAlerts > 0]
+      [s.total, 'Total players'], [s.champions, 'Picked their own name'], [s.playedToday, 'Played today'], [s.joinedToday, 'New today'],
+      [s.answersToday, 'Answers today'], [pct + '%', 'Correct today'], [s.dailyToday, 'Played the Daily 10 today'], [s.alive, 'In a run right now'],
+      [s.friendsInvited, 'Friends who played (all time)'], [s.bonusesWaiting, 'Comebacks waiting'],
+      [s.hallOfFame, 'Hall of Fame finishes'], [s.newAlerts, 'New cheat alerts', s.newAlerts > 0]
     ];
     var f = D.funnel;
     $('funnel').innerHTML = [
-      [f.guestTries, 'Visitor questions answered'], [f.signups, 'Signed up'], [f.answered1, 'Answered a question'],
-      [f.days2, 'Played on 2+ days'], [f.days7, 'Played on 7+ days'], [f.restarts, 'Free restarts'],
+      [f.answered1, 'Answered a question'], [f.answered10, 'Answered 10+'], [f.saved, 'Picked a name and PIN'],
+      [f.days2, 'Played on 2+ days'], [f.days7, 'Played on 7+ days'], [f.restarts, 'Play-agains'],
       [f.comebacks, 'Comebacks used'], [f.shares, 'Results shared']
     ].map(function (i) {
       return '<div class="stat"><div class="n">' + esc(i[0]) + '</div><div class="l">' + esc(i[1]) + '</div></div>';
@@ -311,7 +316,7 @@
 
   // ---------- players ----------
   function statusPill(p) {
-    var label = p.status === 'Alive' ? 'Alive, question ' + p.day : p.status === 'Out' ? 'Out on question ' + p.outOnDay : p.status;
+    var label = p.status === 'Alive' ? 'Playing, on ' + p.survived : p.status === 'Out' ? 'Run ended at ' + Math.max(0, (p.outOnDay || 1) - 1) : p.status === 'Ready' ? 'Between runs' : p.status;
     return '<span class="pill ' + esc(p.status) + '">' + esc(label) + '</span>';
   }
   function renderPlayers() {
@@ -320,6 +325,8 @@
       if (q && p.name.toLowerCase().indexOf(q) < 0) return false;
       if (f === 'bonus') return p.bonus > 0;
       if (f === 'recruiter') return p.friends > 0;
+      if (f === 'saved') return p.saved;
+      if (f === 'auto') return !p.saved;
       if (f) return p.status === f;
       return true;
     });
@@ -327,16 +334,18 @@
       if (sort === 'joined') return b.joinedMs - a.joinedMs;
       if (sort === 'friends') return b.friends - a.friends;
       if (sort === 'name') return a.name.localeCompare(b.name);
+      if (sort === 'best') return b.best - a.best || a.name.localeCompare(b.name);
+      if (sort === 'answers') return b.totalAnswers - a.totalAnswers || a.name.localeCompare(b.name);
       return b.survived - a.survived || a.name.localeCompare(b.name);
     });
     $('pCount').textContent = list.length + ' shown';
-    $('pTable').innerHTML = '<tr><th>Name</th><th>Status</th><th>Correct in a row</th><th>Best</th><th>Bonus</th><th>Friends</th><th>Joined</th><th>Flags</th></tr>' +
+    $('pTable').innerHTML = '<tr><th>Name</th><th>Status</th><th>Streak now</th><th>Best</th><th>Answers</th><th>Daily today</th><th>Comebacks</th><th>Friends</th><th>Joined</th><th>Flags</th></tr>' +
       list.map(function (p) {
         var flags = [];
         if (p.devices > 1) flags.push(p.devices + ' devices');
         if (p.fast >= 3) flags.push(p.fast + ' lightning answers');
-        return '<tr class="click" onclick="openPlayer(\'' + p.id + '\')"><td><b>' + esc(p.name) + '</b></td><td>' + statusPill(p) +
-          '</td><td>' + p.survived + ' of ' + D.length + '</td><td>' + p.best + '</td><td>' + p.bonus + '</td><td>' + p.friends +
+        return '<tr class="click" onclick="openPlayer(\'' + p.id + '\')"><td><b>' + esc(p.name) + '</b>' + (p.saved ? '' : ' <span class="muted small">(fun name)</span>') + '</td><td>' + statusPill(p) +
+          '</td><td>' + p.survived + '</td><td>' + p.best + '</td><td>' + p.totalAnswers + '</td><td>' + esc(p.dailyToday) + '</td><td>' + p.bonus + '</td><td>' + p.friends +
           '</td><td class="muted small">' + esc(p.joined) + '</td><td class="small" style="color:#b42318">' + esc(flags.join(', ')) + '</td></tr>';
       }).join('');
   }
@@ -345,27 +354,27 @@
     if (!p) { toast('Player not found. Click Refresh.', true); return; }
     var why = p.reason ? ' (' + p.reason + ')' : '';
     var h = '<h2>' + esc(p.name) + ' ' + statusPill(p) + '</h2><div class="kv">' +
-      '<div>Status</div><div>' + esc(p.status) + (p.status === 'Out' ? ' on Day ' + p.outOnDay + esc(why) : '') + '</div>' +
-      (p.nextAt ? '<div>Schedule</div><div>' + esc(p.nextAt) + '</div>' : '') +
-      '<div>Correct in a row</div><div>' + p.survived + ' of ' + D.length + ' (best ever: ' + p.best + ')</div>' +
-      '<div>Pause days left</div><div>' + p.pausesLeft + '</div>' +
+      '<div>Status</div><div>' + esc(p.status) + (p.status === 'Out' ? ' (missed question ' + p.outOnDay + ')' + esc(why) : '') + '</div>' +
+      '<div>Account</div><div>' + (p.saved ? 'Picked their own name and PIN' : 'Automatic fun name (has not saved yet)') + '</div>' +
+      '<div>Streak now</div><div>' + p.survived + ' (best ever: ' + p.best + ')</div>' +
+      '<div>Total answers</div><div>' + p.totalAnswers + '</div>' +
+      '<div>Daily 10</div><div>Today: ' + (esc(p.dailyToday) || 'not played') + ' &middot; streak ' + p.dailyStreak + ' days &middot; best ' + p.dailyBest + '/10</div>' +
       '<div>Comebacks this run</div><div>' + p.comebacks + '</div>' +
       '<div>Last question</div><div>' + (esc(p.lastQ) || '<span class="muted">none yet</span>') + '</div>' +
       '<div>Run number</div><div>' + p.attempt + '</div>' +
-      '<div>Bonus questions</div><div>' + p.bonus + ' waiting, ' + p.bonusUsedToday + ' used today</div>' +
+      '<div>Comebacks</div><div>' + p.bonus + ' waiting, ' + p.bonusUsedToday + ' used today</div>' +
       '<div>Friends invited</div><div>' + p.friends + '</div>' +
       '<div>Invited by</div><div>' + (esc(p.invitedBy) || '<span class="muted">nobody</span>') + '</div>' +
       '<div>Joined</div><div>' + esc(p.joined) + '</div>' +
       '<div>Devices used</div><div>' + p.devices + '</div>' +
       '<div>Lightning answers</div><div>' + p.fast + '</div>' +
       '</div>' +
-      '<h3>Bonus questions (used for comebacks)</h3><div class="actions">' +
-      '<button class="btn" onclick="pAct(\'bonusAdd\')">Give 1 bonus</button>' +
-      '<button class="btn light" onclick="pAct(\'bonusRemove\')">Take 1 bonus away</button></div>' +
+      '<h3>Comebacks</h3><div class="actions">' +
+      '<button class="btn" onclick="pAct(\'bonusAdd\')">Give 1 comeback</button>' +
+      '<button class="btn light" onclick="pAct(\'bonusRemove\')">Take 1 comeback away</button></div>' +
       '<h3>Game</h3><div class="actions">' +
       (p.status === 'Out' ? '<button class="btn green" onclick="pAct(\'revive\')">Bring back where they left off (free)</button>' : '') +
-      (p.status === 'Alive' ? '<button class="btn light" onclick="pAct(\'pauseAdd\')">Give 1 extra pause day</button>' +
-        '<button class="btn red" onclick="pConfirm(\'knockout\',\'Knock this player out of their run?\')">Knock out</button>' : '') +
+      (p.status === 'Alive' ? '<button class="btn red" onclick="pConfirm(\'knockout\',\'End this player\\\'s current run?\')">End their run</button>' : '') +
       '<button class="btn light" onclick="pConfirm(\'newRun\',\'Start a brand new run at question 1 for this player?\')">Start a new run at question 1</button></div>' +
       '<h3>Account</h3><div class="actions">' +
       '<input type="text" id="newPin" placeholder="New PIN (4-6 numbers)" style="width:190px"><button class="btn light" onclick="pAct(\'resetPin\', $(\'newPin\').value)">Set new PIN</button>' +
@@ -415,7 +424,7 @@
         var pct = x.pct === null ? '<span class="muted small">no answers</span>'
           : x.pct + '% <span class="muted small">of ' + x.answered + '</span>' + (x.suspicious ? ' <b style="color:#b42318">check</b>' : '');
         return '<tr' + (x.suspicious ? ' class="sus"' : '') + '><td><input type="checkbox" ' + (x.active ? 'checked' : '') + ' onchange="act(\'panelToggleQuestion\',' + x.row + ',this.checked)"></td>' +
-          '<td><b>' + esc(x.id) + '</b></td><td class="small">' + esc(x.difficulty) +
+          '<td><b>' + esc(x.id) + '</b>' + (x.source === 'Open Trivia DB' ? '<div class="muted small">OTDB</div>' : '') + '</td><td class="small">' + esc(x.difficulty) +
           '</td><td>' + esc(x.question) + '</td><td>' + esc(x.correct) + '. ' + esc(x[x.correct] || '?') +
           '</td><td class="small">' + pct + '</td><td><button class="btn light" onclick="editQuestion(' + x.row + ')">Edit</button></td></tr>';
       }).join('');
@@ -513,7 +522,12 @@
     if (!d) { toast('Type a question ID first, like Q012.', true); return; }
     if (confirm('Bring back everyone knocked out by ' + d + '?')) act('panelReviveQuestion', d);
   }
-  function giveEveryone() { if (confirm('Give every player 1 bonus question?')) act('panelGiveEveryoneBonus'); }
+  function giveEveryone() { if (confirm('Give every player 1 comeback?')) act('panelGiveEveryoneBonus'); }
+  function importOTDB() {
+    if (!confirm('Import up to 300 questions from the Open Trivia Database? It takes about a minute.')) return;
+    var b = $('importBtn'); b.disabled = true; b.textContent = 'Importing... (about a minute)';
+    act('panelImportOpenTrivia').then(function () { b.disabled = false; b.textContent = 'Import 300 questions'; });
+  }
   function runChecks() { act('panelRunChecks'); }
 
   // ---------- modal ----------

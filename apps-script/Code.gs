@@ -48,17 +48,21 @@ const TAB = {
 };
 
 const PLAYER_HEADERS = ['Player ID', 'Display Name', 'PIN Hash', 'Login Token', 'Joined', 'Confirmed 13+',
-  'Status', 'Run Started', 'Attempt', 'Days Survived', 'Out On Day', 'Out Reason', 'Best Run',
+  'Status', 'Run Started', 'Attempt', 'Current Run Score', 'Out On Question', 'Out Reason', 'Best Endless Run',
   'Bonus Questions', 'Bonus Date', 'Bonus Used That Date', 'Invited By', 'Friends Invited',
   'Current Question', 'Last Question', 'Devices', 'Fast Answers', 'Question Shown At', 'Shown Question',
-  'Last Day Played', 'Pause Days Used', 'Comebacks', 'Seen Questions', 'Last Restart Date'];
+  'Last Day Played', 'Pause Days Used', 'Comebacks', 'Seen Questions', 'Last Restart Date',
+  'Saved Account', 'Total Answers', 'Invite Credited', 'Best Today Date', 'Best Today', 'Daily Date', 'Daily Question',
+  'Daily Score', 'Daily Done', 'Daily Streak', 'Daily Last Played', 'Daily Best'];
 const P = { ID: 0, NAME: 1, HASH: 2, TOKEN: 3, JOINED: 4, AGE: 5, STATUS: 6, START: 7, ATTEMPT: 8,
   DAYS: 9, OUTDAY: 10, REASON: 11, BEST: 12, BONUS: 13, BONUSDATE: 14, BONUSUSED: 15,
   REFBY: 16, FRIENDS: 17, CURQ: 18, LASTQ: 19, DEVICES: 20, FAST: 21, SHOWNAT: 22, SHOWNQ: 23,
-  LASTDATE: 24, PAUSES: 25, COMEBACKS: 26, SEEN: 27, RESTARTDATE: 28 };
+  LASTDATE: 24, PAUSES: 25, COMEBACKS: 26, SEEN: 27, RESTARTDATE: 28,
+  SAVED: 29, TOTALANS: 30, REFCREDITED: 31, TODAYDATE: 32, TODAYBEST: 33, DAILYDATE: 34, DAILYIDX: 35,
+  DAILYSCORE: 36, DAILYDONE: 37, DAILYSTREAK: 38, DAILYLASTDATE: 39, DAILYBEST: 40 };
 
-const QUESTION_HEADERS = ['ID', 'Difficulty', 'Question', 'A', 'B', 'C', 'D', 'Correct', 'Fun Fact', 'Active?'];
-const ANSWER_HEADERS = ['Timestamp', 'Player ID', 'Display Name', 'Attempt', 'Day', 'Question Used', 'Choice', 'Correct?', 'Seconds To Answer'];
+const QUESTION_HEADERS = ['ID', 'Difficulty', 'Question', 'A', 'B', 'C', 'D', 'Correct', 'Fun Fact', 'Active?', 'Source'];
+const ANSWER_HEADERS = ['Timestamp', 'Player ID', 'Display Name', 'Attempt', 'Day', 'Question Used', 'Choice', 'Correct?', 'Seconds To Answer', 'Mode'];
 const HALL_HEADERS = ['Finished On', 'Display Name', 'Attempt', 'Days Survived', 'Comebacks'];
 const ADS_HEADERS = ['Show On', 'Headline', 'Product', 'Amazon Link', 'Active?'];
 const AMAZON_DISCLOSURE = 'As an Amazon Associate I earn from qualifying purchases.';
@@ -119,164 +123,469 @@ const CHEAT = {
   PIN_FAILS: 5            // alert after this many wrong PIN tries on one account
 };
 
-// Question bank: [ID, Difficulty, Question, A, B, C, D, Correct, Fun Fact, Active?]
+// Question bank: [ID, Difficulty, Question, A, B, C, D, Correct, Fun Fact, Active?, Source]
 const STARTER_QUESTIONS = [
-  ["Q001", "Easy", "Which planet is known as the Red Planet?", "Venus", "Mars", "Jupiter", "Mercury", "B", "Mars gets its red color from iron oxide, which is basically rust, in its soil.", "Yes"],
-  ["Q002", "Easy", "How many legs does a spider have?", "6", "10", "8", "12", "C", "Spiders are arachnids, not insects. Insects have 6 legs.", "Yes"],
-  ["Q003", "Easy", "What is the largest ocean on Earth?", "Atlantic", "Indian", "Arctic", "Pacific", "D", "The Pacific covers roughly a third of Earth's surface.", "Yes"],
-  ["Q004", "Easy", "Which instrument has 88 keys on a standard modern model?", "Piano", "Violin", "Trumpet", "Harp", "A", "Those 88 keys are made up of 52 white keys and 36 black keys.", "Yes"],
-  ["Q005", "Easy", "Which gas do plants take in from the air to make their food?", "Oxygen", "Nitrogen", "Carbon dioxide", "Helium", "C", "Plants release oxygen as a byproduct of photosynthesis.", "Yes"],
-  ["Q006", "Easy", "In which country are the Pyramids of Giza?", "Mexico", "Egypt", "Peru", "Greece", "B", "The Great Pyramid was the tallest human-made structure on Earth for thousands of years.", "Yes"],
-  ["Q007", "Easy", "How many sides does a hexagon have?", "5", "7", "6", "8", "C", "Honeybees build their honeycomb cells in hexagon shapes.", "Yes"],
-  ["Q008", "Medium", "Which U.S. state is the largest by area?", "Texas", "California", "Montana", "Alaska", "D", "Alaska is more than twice the size of Texas.", "Yes"],
-  ["Q009", "Medium", "What is the chemical symbol for gold?", "Au", "Ag", "Gd", "Go", "A", "Au comes from the Latin word for gold, aurum.", "Yes"],
-  ["Q010", "Medium", "Who painted the Mona Lisa?", "Michelangelo", "Raphael", "Leonardo da Vinci", "Rembrandt", "C", "The Mona Lisa hangs in the Louvre museum in Paris.", "Yes"],
-  ["Q011", "Medium", "What is the capital of Australia?", "Sydney", "Canberra", "Melbourne", "Perth", "B", "Canberra was built as a compromise because Sydney and Melbourne both wanted to be the capital.", "Yes"],
-  ["Q012", "Medium", "How many strings does a standard violin have?", "4", "5", "6", "8", "A", "A violin's strings are tuned G, D, A, and E.", "Yes"],
-  ["Q013", "Medium", "Which of these is the hardest mineral?", "Topaz", "Quartz", "Talc", "Diamond", "D", "Diamonds are made of pure carbon.", "Yes"],
-  ["Q014", "Medium", "Which organ in the human body produces insulin?", "Liver", "Pancreas", "Kidney", "Spleen", "B", "The pancreas sits tucked behind the stomach.", "Yes"],
-  ["Q015", "Hard", "In what year did the Berlin Wall fall?", "1987", "1991", "1989", "1993", "C", "The wall came down on November 9, 1989.", "Yes"],
-  ["Q016", "Hard", "What is the smallest prime number?", "0", "1", "2", "3", "C", "2 is also the only even prime number.", "Yes"],
-  ["Q017", "Hard", "Which element has atomic number 1?", "Helium", "Hydrogen", "Lithium", "Oxygen", "B", "Hydrogen is the most abundant element in the universe.", "Yes"],
-  ["Q018", "Hard", "Which of these countries is known for having the most lakes?", "Russia", "United States", "Finland", "Canada", "D", "Canada is often said to have more lakes than the rest of the world combined.", "Yes"],
-  ["Q019", "Hard", "What is the longest bone in the human body?", "Femur", "Tibia", "Humerus", "Pelvis", "A", "The femur, or thigh bone, is roughly a quarter of a person's height.", "Yes"],
-  ["Q020", "Hard", "Which composer wrote The Four Seasons?", "Bach", "Handel", "Vivaldi", "Mozart", "C", "Vivaldi was also a priest, nicknamed the Red Priest because of his red hair.", "Yes"],
-  ["Q021", "Hard", "Roughly how fast does light travel?", "18,600 miles per second", "186,000 miles per second", "1,860,000 miles per second", "18,600,000 miles per second", "B", "Light from the Sun takes about 8 minutes to reach Earth.", "Yes"],
-  ["Q022", "Very Hard", "Which is the only U.S. state whose name has just one syllable?", "Utah", "Iowa", "Ohio", "Maine", "D", "Maine is also the only state that borders exactly one other state, New Hampshire.", "Yes"],
-  ["Q023", "Very Hard", "Which letter does not appear in the name of any U.S. state?", "Q", "Z", "X", "J", "A", "J is in New Jersey, X is in Texas, and Z is in Arizona.", "Yes"],
-  ["Q024", "Very Hard", "Which planet has the shortest day?", "Earth", "Saturn", "Jupiter", "Mercury", "C", "Jupiter spins all the way around in about 10 hours.", "Yes"],
-  ["Q025", "Very Hard", "How many bones are in the typical adult human body?", "196", "206", "216", "226", "B", "Babies are born with around 270 bones, and many fuse together as they grow.", "Yes"],
-  ["Q026", "Very Hard", "What is the national animal of Scotland?", "Lion", "Stag", "Eagle", "Unicorn", "D", "The unicorn has appeared on Scotland's royal coat of arms for centuries.", "Yes"],
-  ["Q027", "Very Hard", "Which of these countries has the longest coastline?", "Russia", "Australia", "Canada", "Indonesia", "C", "Canada's coastline touches three oceans: the Atlantic, Pacific, and Arctic.", "Yes"],
-  ["Q028", "Very Hard", "How many hearts does an octopus have?", "2", "3", "1", "4", "B", "Two hearts pump blood to the gills, and the third pumps it to the rest of the body.", "Yes"],
-  ["Q029", "Very Hard", "What is the smallest country in the world by area?", "Monaco", "Vatican City", "San Marino", "Liechtenstein", "B", "Vatican City covers only about 0.17 square miles.", "Yes"],
-  ["Q030", "Very Hard", "Counting both hot and cold deserts, what is the largest desert on Earth?", "Sahara", "Gobi", "Arabian", "Antarctic", "D", "A desert is defined by how little precipitation it gets, not by heat, so frozen Antarctica counts.", "Yes"],
-  ["Q031", "Medium", "Which gas makes up most of Earth's air?", "Oxygen", "Nitrogen", "Argon", "Carbon dioxide", "B", "Nitrogen makes up about 78 percent of the air we breathe.", "Yes"],
-  ["Q032", "Hard", "Which blood type is known as the universal donor for red blood cells?", "AB positive", "A negative", "O negative", "B positive", "C", "Because it can go to almost anyone, O negative is often used in emergencies.", "Yes"],
-  ["Q033", "Medium", "How many half steps (semitones) are in one octave?", "8", "10", "12", "14", "C", "That is why the pattern of black and white keys on a piano repeats every 12 keys.", "Yes"],
-  ["Q034", "Medium", "Which metal is a liquid at room temperature?", "Lead", "Mercury", "Tin", "Aluminum", "B", "Mercury was once widely used in thermometers.", "Yes"],
-  ["Q035", "Easy", "What is the capital of Canada?", "Toronto", "Montreal", "Vancouver", "Ottawa", "D", "Queen Victoria chose Ottawa as the capital in 1857.", "Yes"],
-  ["Q036", "Very Hard", "How many official time zones does China use?", "1", "3", "4", "5", "A", "China stretches across about five geographic time zones but runs everything on Beijing Time.", "Yes"],
-  ["Q037", "Easy", "What color do you get by mixing blue and yellow paint?", "Green", "Purple", "Orange", "Brown", "A", "Red, yellow, and blue are the traditional primary colors used in painting.", "Yes"],
-  ["Q038", "Easy", "How many continents are usually taught in U.S. schools?", "5", "6", "7", "8", "C", "Some countries teach 5 or 6 continents by counting the Americas, or Europe and Asia, as one.", "Yes"],
-  ["Q039", "Easy", "What is the largest planet in our solar system?", "Saturn", "Jupiter", "Neptune", "Earth", "B", "More than 1,000 Earths could fit inside Jupiter.", "Yes"],
-  ["Q040", "Easy", "At what temperature does water freeze in degrees Fahrenheit?", "0", "100", "32", "212", "C", "At sea level, water boils at 212 degrees Fahrenheit.", "Yes"],
-  ["Q041", "Easy", "Which animal is often called the King of the Jungle?", "Tiger", "Elephant", "Lion", "Gorilla", "C", "Despite the nickname, most lions live on grasslands and savannas, not in jungles.", "Yes"],
-  ["Q042", "Easy", "How many days are in a leap year?", "364", "365", "366", "367", "C", "Leap years add February 29 to keep the calendar in step with Earth's trip around the Sun.", "Yes"],
-  ["Q043", "Easy", "What is the capital of France?", "Paris", "Lyon", "Marseille", "Nice", "A", "The Eiffel Tower was built for the 1889 World's Fair in Paris.", "Yes"],
-  ["Q044", "Easy", "Which bird is a well-known symbol of peace?", "Eagle", "Dove", "Crow", "Owl", "B", "Doves and pigeons belong to the same bird family.", "Yes"],
-  ["Q045", "Easy", "What do honeybees make?", "Silk", "Maple syrup", "Cheese", "Honey", "D", "A single honeybee makes only about one-twelfth of a teaspoon of honey in its whole life.", "Yes"],
-  ["Q046", "Easy", "Which ocean lies between the United States and Europe?", "Pacific", "Atlantic", "Indian", "Arctic", "B", "The Atlantic is the second-largest ocean on Earth.", "Yes"],
-  ["Q047", "Easy", "What is the tallest animal in the world?", "Giraffe", "Elephant", "Camel", "Moose", "A", "A giraffe's long neck has seven bones, the same number as a human neck.", "Yes"],
-  ["Q048", "Easy", "Which planet is closest to the Sun?", "Venus", "Mars", "Mercury", "Earth", "C", "A year on Mercury lasts only 88 Earth days.", "Yes"],
-  ["Q049", "Easy", "How many players does one soccer team have on the field at a time?", "9", "10", "12", "11", "D", "That count of 11 includes the goalkeeper.", "Yes"],
-  ["Q050", "Easy", "What is the main ingredient in guacamole?", "Avocado", "Tomato", "Cucumber", "Pea", "A", "Botanically, an avocado is a large berry with a single seed.", "Yes"],
-  ["Q051", "Easy", "Which month has the fewest days?", "January", "February", "April", "November", "B", "February has 28 days, or 29 in a leap year.", "Yes"],
-  ["Q052", "Easy", "Which gas in the air do people need to breathe to stay alive?", "Oxygen", "Helium", "Hydrogen", "Neon", "A", "The air around us is only about 21 percent oxygen.", "Yes"],
-  ["Q053", "Easy", "In which country is the Great Wall?", "China", "Japan", "India", "Korea", "A", "Despite the popular myth, the Great Wall cannot be seen with the naked eye from the Moon.", "Yes"],
-  ["Q054", "Easy", "What is the largest animal on Earth?", "African elephant", "Blue whale", "Giraffe", "Hippopotamus", "B", "A blue whale's heart is roughly the size of a small car.", "Yes"],
-  ["Q055", "Easy", "Which instrument usually has six strings and is often strummed?", "Violin", "Harp", "Cello", "Guitar", "D", "Some guitars have 12 strings, set up in pairs.", "Yes"],
-  ["Q056", "Easy", "What do you call a shape with four equal sides and four right angles?", "Triangle", "Square", "Pentagon", "Octagon", "B", "A square also counts as a rectangle and a rhombus.", "Yes"],
-  ["Q057", "Easy", "Which famous ship sank in 1912 after hitting an iceberg?", "Lusitania", "Mayflower", "Titanic", "Britannic", "C", "The Titanic was on its very first voyage, from Southampton, England, to New York.", "Yes"],
-  ["Q058", "Easy", "What is the capital of the United States?", "New York City", "Washington, D.C.", "Philadelphia", "Boston", "B", "Both New York City and Philadelphia served as the capital before Washington, D.C.", "Yes"],
-  ["Q059", "Easy", "How many legs does an insect have?", "6", "4", "8", "10", "A", "Every insect body has three main parts: the head, thorax, and abdomen.", "Yes"],
-  ["Q060", "Easy", "At what temperature does water boil in degrees Celsius at sea level?", "50", "90", "100", "120", "C", "Water boils at a lower temperature high in the mountains because the air pressure is lower.", "Yes"],
-  ["Q061", "Easy", "Finish the saying: An apple a day keeps the ___ away.", "Dentist", "Doctor", "Teacher", "Rain", "B", "An early version of the saying appeared in Wales in the 1860s.", "Yes"],
-  ["Q062", "Easy", "Who was the first President of the United States?", "Thomas Jefferson", "John Adams", "George Washington", "Abraham Lincoln", "C", "George Washington is the only president who never lived in the White House.", "Yes"],
-  ["Q063", "Easy", "How many colors are in a rainbow, as traditionally listed?", "5", "6", "7", "8", "C", "The traditional list is red, orange, yellow, green, blue, indigo, and violet.", "Yes"],
-  ["Q064", "Easy", "What is the largest country in the world by area?", "Canada", "China", "United States", "Russia", "D", "Russia covers more than one-ninth of all the land on Earth.", "Yes"],
-  ["Q065", "Easy", "Which of your senses depends most on your nose?", "Taste", "Smell", "Touch", "Hearing", "B", "Much of what we think of as taste actually comes from smell.", "Yes"],
-  ["Q066", "Easy", "What does a caterpillar turn into?", "A beetle", "A spider", "A butterfly or moth", "A dragonfly", "C", "Butterflies form a chrysalis, while many moths spin a silk cocoon.", "Yes"],
-  ["Q067", "Medium", "What is the chemical symbol for sodium?", "So", "Sd", "Na", "Sn", "C", "Na comes from natrium, the Latin name for sodium.", "Yes"],
-  ["Q068", "Medium", "Which planet is famous for its Great Red Spot?", "Mars", "Jupiter", "Saturn", "Neptune", "B", "The Great Red Spot is a giant storm wider than Earth.", "Yes"],
-  ["Q069", "Medium", "Who wrote Romeo and Juliet?", "Charles Dickens", "Jane Austen", "Mark Twain", "William Shakespeare", "D", "The play is set in the Italian city of Verona.", "Yes"],
-  ["Q070", "Medium", "What is the smallest planet in our solar system?", "Mercury", "Mars", "Venus", "Earth", "A", "Pluto used to be called the smallest planet until it was reclassified as a dwarf planet in 2006.", "Yes"],
-  ["Q071", "Medium", "What is the capital of Japan?", "Kyoto", "Osaka", "Tokyo", "Hiroshima", "C", "Kyoto was Japan's capital for more than 1,000 years before Tokyo.", "Yes"],
-  ["Q072", "Medium", "Which country gave the Statue of Liberty to the United States?", "France", "England", "Spain", "Italy", "A", "The Statue of Liberty was dedicated in 1886.", "Yes"],
-  ["Q073", "Medium", "What is the longest river in South America?", "Amazon", "Orinoco", "Parana", "Magdalena", "A", "The Amazon carries more water than any other river on Earth.", "Yes"],
-  ["Q074", "Medium", "In what year did people first walk on the Moon?", "1965", "1969", "1972", "1959", "B", "Neil Armstrong and Buzz Aldrin landed on the Moon on July 20, 1969.", "Yes"],
-  ["Q075", "Medium", "Which type of blood cell helps the body fight infections?", "Red blood cells", "White blood cells", "Platelets", "Plasma", "B", "Platelets are the cells that help blood clot when you get a cut.", "Yes"],
-  ["Q076", "Medium", "Which language has the most native speakers in the world?", "English", "Spanish", "Mandarin Chinese", "Hindi", "C", "If you count people who speak it as a second language, English has the most speakers overall.", "Yes"],
-  ["Q077", "Medium", "Which metal has the chemical symbol Fe?", "Lead", "Fluorine", "Tin", "Iron", "D", "Fe comes from ferrum, the Latin word for iron.", "Yes"],
-  ["Q078", "Medium", "How many strings does a standard cello have?", "4", "5", "6", "3", "A", "A cello's strings are tuned C, G, D, and A.", "Yes"],
-  ["Q079", "Medium", "Which painter famously cut off part of his own ear?", "Vincent van Gogh", "Pablo Picasso", "Claude Monet", "Salvador Dali", "A", "Van Gogh sold very few paintings during his lifetime.", "Yes"],
-  ["Q080", "Medium", "What is the Sun mostly made of?", "Oxygen", "Helium", "Hydrogen", "Carbon", "C", "About three-quarters of the Sun's mass is hydrogen.", "Yes"],
-  ["Q081", "Medium", "Which U.S. state is nicknamed the Sunshine State?", "California", "Arizona", "Hawaii", "Florida", "D", "Florida is also home to the Kennedy Space Center.", "Yes"],
-  ["Q082", "Medium", "Which of these is the largest organ of the human body?", "Liver", "Brain", "Skin", "Lungs", "C", "An adult's skin weighs about 8 pounds.", "Yes"],
-  ["Q083", "Medium", "Which scientist developed the theory of relativity?", "Isaac Newton", "Albert Einstein", "Galileo Galilei", "Nikola Tesla", "B", "Einstein's Nobel Prize in 1921 was for the photoelectric effect, not for relativity.", "Yes"],
-  ["Q084", "Medium", "What is the capital of Italy?", "Rome", "Milan", "Venice", "Florence", "A", "Vatican City, the world's smallest country, sits inside Rome.", "Yes"],
-  ["Q085", "Medium", "Which planet rotates on its side?", "Uranus", "Neptune", "Saturn", "Venus", "A", "Uranus is tilted about 98 degrees, so it spins almost on its side.", "Yes"],
-  ["Q086", "Medium", "What is a group of lions called?", "A pride", "A pack", "A herd", "A flock", "A", "A pride usually includes several related females, their cubs, and a few males.", "Yes"],
-  ["Q087", "Medium", "In what year did World War II end?", "1943", "1944", "1945", "1946", "C", "The war ended in Europe in May 1945 and in the Pacific in September 1945.", "Yes"],
-  ["Q088", "Medium", "How many players from one basketball team are on the court at a time?", "4", "6", "7", "5", "D", "Basketball was invented by James Naismith in 1891 using peach baskets.", "Yes"],
-  ["Q089", "Medium", "What is the currency of Japan?", "Yuan", "Won", "Yen", "Ringgit", "C", "The yuan is China's currency, and the won is South Korea's.", "Yes"],
-  ["Q090", "Medium", "Which mountain is the tallest above sea level?", "K2", "Kilimanjaro", "Mount Everest", "Denali", "C", "Mount Everest sits on the border between Nepal and China.", "Yes"],
-  ["Q091", "Medium", "How many degrees are in a right angle?", "45", "90", "180", "360", "B", "The angles inside any triangle always add up to 180 degrees.", "Yes"],
-  ["Q092", "Medium", "Kangaroos are native to which of these countries?", "Australia", "New Zealand", "South Africa", "Argentina", "A", "A baby kangaroo is called a joey.", "Yes"],
-  ["Q093", "Medium", "What color is a ruby?", "Blue", "Green", "Red", "Purple", "C", "Rubies and sapphires are the same mineral, called corundum.", "Yes"],
-  ["Q094", "Medium", "Who painted the ceiling of the Sistine Chapel?", "Leonardo da Vinci", "Michelangelo", "Raphael", "Botticelli", "B", "Michelangelo spent about four years painting the ceiling, from 1508 to 1512.", "Yes"],
-  ["Q095", "Medium", "In which city is the ancient Colosseum?", "Athens", "Rome", "Istanbul", "Paris", "B", "The Colosseum could hold around 50,000 spectators.", "Yes"],
-  ["Q096", "Medium", "What is the square root of 144?", "12", "10", "11", "14", "A", "144 is also called a gross, meaning a dozen dozens.", "Yes"],
-  ["Q097", "Hard", "How many bones are in the middle ear?", "1", "2", "3", "4", "C", "The hammer, anvil, and stirrup are the smallest bones in the human body.", "Yes"],
-  ["Q098", "Hard", "Which is the hottest planet in our solar system?", "Mercury", "Venus", "Mars", "Jupiter", "B", "Venus's thick carbon dioxide atmosphere traps heat, making it even hotter than Mercury.", "Yes"],
-  ["Q099", "Hard", "What is the capital of Turkey?", "Ankara", "Istanbul", "Izmir", "Antalya", "A", "Istanbul is Turkey's largest city, but Ankara has been the capital since 1923.", "Yes"],
-  ["Q100", "Hard", "Who wrote the novel 1984?", "Aldous Huxley", "Ray Bradbury", "George Orwell", "H. G. Wells", "C", "George Orwell's real name was Eric Arthur Blair.", "Yes"],
-  ["Q101", "Hard", "Which element has the chemical symbol K?", "Krypton", "Potassium", "Calcium", "Carbon", "B", "K comes from kalium, the Latin name for potassium.", "Yes"],
-  ["Q102", "Hard", "In what year did Christopher Columbus first reach the Americas?", "1492", "1498", "1507", "1520", "A", "Columbus sailed with three ships: the Nina, the Pinta, and the Santa Maria.", "Yes"],
-  ["Q103", "Hard", "How many symphonies did Beethoven complete?", "5", "7", "9", "12", "C", "Beethoven was almost completely deaf when he wrote his Ninth Symphony.", "Yes"],
-  ["Q104", "Hard", "What is the longest river in Africa?", "Congo", "Niger", "Nile", "Zambezi", "C", "The Nile flows north and empties into the Mediterranean Sea.", "Yes"],
-  ["Q105", "Hard", "Which planet has a moon named Titan?", "Jupiter", "Uranus", "Neptune", "Saturn", "D", "Titan is the only moon known to have a thick atmosphere.", "Yes"],
-  ["Q106", "Hard", "What is the only mammal that can truly fly?", "Flying squirrel", "Sugar glider", "Bat", "Colugo", "C", "Flying squirrels and sugar gliders glide, but they can't truly fly.", "Yes"],
-  ["Q107", "Hard", "Who was the first woman to win a Nobel Prize?", "Marie Curie", "Florence Nightingale", "Rosalind Franklin", "Jane Addams", "A", "Marie Curie won two Nobel Prizes, one in physics and one in chemistry.", "Yes"],
-  ["Q108", "Hard", "How many time zones does Russia have?", "7", "9", "11", "13", "C", "When it is morning in western Russia, it is already evening in the far east.", "Yes"],
-  ["Q109", "Hard", "What is the capital of Brazil?", "Brasilia", "Rio de Janeiro", "Sao Paulo", "Salvador", "A", "Brasilia was built from scratch and became the capital in 1960.", "Yes"],
-  ["Q110", "Hard", "Which composer wrote the Moonlight Sonata?", "Mozart", "Beethoven", "Chopin", "Bach", "B", "The name Moonlight was given by a music critic after Beethoven died.", "Yes"],
-  ["Q111", "Hard", "What is the chemical symbol for silver?", "Si", "Sv", "Ag", "Au", "C", "Ag comes from argentum, the Latin word for silver.", "Yes"],
-  ["Q112", "Hard", "Which ancient wonder stood in Alexandria, Egypt?", "The Colossus", "The Lighthouse", "The Hanging Gardens", "The Temple of Artemis", "B", "The Lighthouse of Alexandria was one of the tallest structures in the world for centuries.", "Yes"],
-  ["Q113", "Hard", "How many players from one baseball team are on the field while their team is on defense?", "8", "10", "11", "9", "D", "Those 9 players include the pitcher and the catcher.", "Yes"],
-  ["Q114", "Hard", "Which planet takes the longest to spin around once?", "Venus", "Mercury", "Mars", "Jupiter", "A", "A single day on Venus is longer than its whole year.", "Yes"],
-  ["Q115", "Hard", "What is the heaviest organ inside the human body?", "Liver", "Heart", "Lungs", "Kidneys", "A", "The liver can grow back after part of it is removed.", "Yes"],
-  ["Q116", "Hard", "In which country did the ancient Olympic Games begin?", "Italy", "Greece", "Egypt", "France", "B", "The ancient Games began in Olympia around 776 BC.", "Yes"],
-  ["Q117", "Hard", "Who received the first U.S. patent for the telephone?", "Thomas Edison", "Nikola Tesla", "Alexander Graham Bell", "Samuel Morse", "C", "Bell received the telephone patent in 1876.", "Yes"],
-  ["Q118", "Hard", "What is the main ingredient in traditional hummus?", "Lentils", "Chickpeas", "Black beans", "Green peas", "B", "Traditional hummus also includes tahini, a paste made from sesame seeds.", "Yes"],
-  ["Q119", "Hard", "How many sides does a dodecagon have?", "12", "10", "14", "20", "A", "Dodeca comes from the Greek word for twelve.", "Yes"],
-  ["Q120", "Hard", "What is the largest moon in our solar system?", "Titan", "Ganymede", "Europa", "Earth's Moon", "B", "Ganymede, one of Jupiter's moons, is bigger than the planet Mercury.", "Yes"],
-  ["Q121", "Hard", "Which physicist wrote A Brief History of Time?", "Carl Sagan", "Neil deGrasse Tyson", "Richard Feynman", "Stephen Hawking", "D", "The book was first published in 1988.", "Yes"],
-  ["Q122", "Hard", "What city is the seat of Switzerland's government?", "Zurich", "Geneva", "Bern", "Basel", "C", "Switzerland officially calls Bern its federal city rather than its capital.", "Yes"],
-  ["Q123", "Hard", "Phobos is a moon of which planet?", "Mars", "Jupiter", "Venus", "Saturn", "A", "Phobos is slowly spiraling closer to Mars.", "Yes"],
-  ["Q124", "Hard", "What is the tallest uninterrupted waterfall in the world?", "Niagara Falls", "Victoria Falls", "Angel Falls", "Iguazu Falls", "C", "Angel Falls in Venezuela drops about 3,200 feet.", "Yes"],
-  ["Q125", "Hard", "How many teeth does a typical adult have, counting wisdom teeth?", "28", "30", "32", "36", "C", "Many adults have some or all of their four wisdom teeth removed.", "Yes"],
-  ["Q126", "Hard", "Who painted The Starry Night?", "Claude Monet", "Vincent van Gogh", "Rembrandt", "Paul Cezanne", "B", "Van Gogh painted it in 1889 while staying at an asylum in southern France.", "Yes"],
-  ["Q127", "Very Hard", "What is the smallest bone in the human body?", "Incus", "Stapes", "Malleus", "Coccyx", "B", "The stapes, or stirrup, is about the size of a grain of rice.", "Yes"],
-  ["Q128", "Very Hard", "What is the capital of New Zealand?", "Auckland", "Christchurch", "Wellington", "Queenstown", "C", "Wellington is the southernmost capital city of any country.", "Yes"],
-  ["Q129", "Very Hard", "How many strings does a standard concert pedal harp have?", "36", "41", "47", "52", "C", "Harpists use seven foot pedals to change the pitch of the strings.", "Yes"],
-  ["Q130", "Very Hard", "In what year did the American Civil War end?", "1861", "1863", "1865", "1868", "C", "General Lee surrendered at Appomattox Court House in April 1865.", "Yes"],
-  ["Q131", "Very Hard", "Who composed the music for the ballet The Nutcracker?", "Rachmaninoff", "Stravinsky", "Prokofiev", "Tchaikovsky", "D", "The Nutcracker premiered in St. Petersburg in 1892.", "Yes"],
-  ["Q132", "Very Hard", "What is the chemical symbol for tungsten?", "T", "Tu", "W", "Tn", "C", "W comes from wolfram, another name for tungsten.", "Yes"],
-  ["Q133", "Very Hard", "Which continent has no permanent human residents?", "Australia", "Antarctica", "Europe", "South America", "B", "The only people living in Antarctica are scientists and staff who stay for a few months at a time.", "Yes"],
-  ["Q134", "Very Hard", "What is the largest species of shark?", "Great white shark", "Whale shark", "Basking shark", "Tiger shark", "B", "Despite its size, the whale shark eats mostly plankton.", "Yes"],
-  ["Q135", "Very Hard", "Which U.S. state has the longest coastline?", "California", "Florida", "Alaska", "Hawaii", "C", "Alaska has more coastline than all the other states combined.", "Yes"],
-  ["Q136", "Very Hard", "Which planet was found by math before anyone saw it in a telescope?", "Uranus", "Neptune", "Saturn", "Mars", "B", "Astronomers spotted Neptune in 1846, right where the math said it would be.", "Yes"],
-  ["Q137", "Very Hard", "Who wrote The Canterbury Tales?", "John Milton", "Edmund Spenser", "Geoffrey Chaucer", "Thomas Malory", "C", "Chaucer wrote The Canterbury Tales in the late 1300s.", "Yes"],
-  ["Q138", "Very Hard", "What is the largest lake in Africa?", "Lake Tanganyika", "Lake Malawi", "Lake Chad", "Lake Victoria", "D", "Lake Victoria is shared by Uganda, Kenya, and Tanzania.", "Yes"],
-  ["Q139", "Very Hard", "Where is the deepest known point in Earth's oceans?", "Puerto Rico Trench", "Mariana Trench", "Java Trench", "Tonga Trench", "B", "The deepest part of the Mariana Trench, called the Challenger Deep, is nearly 7 miles down.", "Yes"],
-  ["Q140", "Very Hard", "How many official national languages does Switzerland have?", "2", "3", "4", "5", "C", "They are German, French, Italian, and Romansh.", "Yes"],
-  ["Q141", "Very Hard", "Which number, written in English, has its letters in alphabetical order?", "Fifty", "Seventy", "Eighty", "Forty", "D", "F, O, R, T, Y: each letter comes later in the alphabet than the one before it.", "Yes"],
-  ["Q142", "Very Hard", "Who was the second person to walk on the Moon?", "Michael Collins", "Pete Conrad", "Buzz Aldrin", "Alan Shepard", "C", "Michael Collins stayed in orbit, flying the command module, while the others walked on the Moon.", "Yes"],
-  ["Q143", "Very Hard", "What is the most common element in Earth's crust?", "Silicon", "Oxygen", "Iron", "Aluminum", "B", "Most of that oxygen is locked inside rocks and minerals.", "Yes"],
-  ["Q144", "Very Hard", "How many light and dark squares make up a standard chessboard?", "48", "56", "64", "72", "C", "Count every size of square, from 1-by-1 up to the full 8-by-8 board, and there are 204.", "Yes"],
-  ["Q145", "Very Hard", "Which musical closed in 2023 as the longest-running show in Broadway history?", "Chicago", "The Lion King", "The Phantom of the Opera", "Cats", "C", "The Phantom of the Opera ran on Broadway for 35 years, from 1988 to 2023.", "Yes"],
-  ["Q146", "Very Hard", "Which planet has the fastest winds in the solar system?", "Jupiter", "Saturn", "Neptune", "Uranus", "C", "Winds on Neptune can blow faster than 1,000 miles per hour.", "Yes"],
-  ["Q147", "Very Hard", "Which bird can fly backward?", "Swift", "Kingfisher", "Sparrow", "Hummingbird", "D", "Some hummingbirds beat their wings more than 50 times per second.", "Yes"],
-  ["Q148", "Very Hard", "What is the capital of Morocco?", "Casablanca", "Marrakesh", "Rabat", "Fez", "C", "Casablanca is Morocco's largest city.", "Yes"],
-  ["Q149", "Very Hard", "How many moons does Mars have?", "0", "1", "2", "3", "C", "The two moons of Mars are named Phobos and Deimos.", "Yes"],
-  ["Q150", "Very Hard", "Besides mercury, which element is a liquid at room temperature?", "Chlorine", "Bromine", "Iodine", "Fluorine", "B", "Bromine is a reddish-brown liquid with a strong smell.", "Yes"],
-  ["Q151", "Very Hard", "What is the longest river in Europe?", "Danube", "Rhine", "Volga", "Dnieper", "C", "The Volga flows through Russia and empties into the Caspian Sea.", "Yes"],
-  ["Q152", "Very Hard", "How many amendments make up the U.S. Bill of Rights?", "5", "10", "12", "27", "B", "The Constitution has 27 amendments in total.", "Yes"],
-  ["Q153", "Very Hard", "What is the tallest mountain in Africa?", "Mount Kenya", "Mount Toubkal", "Mount Stanley", "Mount Kilimanjaro", "D", "Kilimanjaro is a dormant volcano in Tanzania.", "Yes"],
-  ["Q154", "Very Hard", "Which planet in our solar system is the densest?", "Jupiter", "Earth", "Mercury", "Venus", "B", "Saturn is the least dense planet. It is less dense than water.", "Yes"],
-  ["Q155", "Very Hard", "What is the largest living bird?", "Emu", "Albatross", "Ostrich", "Cassowary", "C", "An ostrich egg is the largest egg laid by any living bird.", "Yes"],
-  ["Q156", "Very Hard", "Which mathematician wrote the famous 'last theorem' that went unproven for more than 350 years?", "Leonhard Euler", "Pierre de Fermat", "Carl Friedrich Gauss", "Blaise Pascal", "B", "Andrew Wiles finally proved it in the mid-1990s.", "Yes"]
+  ["Q001", "Easy", "Which planet is known as the Red Planet?", "Venus", "Mars", "Jupiter", "Mercury", "B", "Mars gets its red color from iron oxide, which is basically rust, in its soil.", "Yes", "Holdout"],
+  ["Q002", "Easy", "How many legs does a spider have?", "6", "10", "8", "12", "C", "Spiders are arachnids, not insects. Insects have 6 legs.", "Yes", "Holdout"],
+  ["Q003", "Easy", "What is the largest ocean on Earth?", "Atlantic", "Indian", "Arctic", "Pacific", "D", "The Pacific covers roughly a third of Earth's surface.", "Yes", "Holdout"],
+  ["Q004", "Easy", "Which instrument has 88 keys on a standard modern model?", "Piano", "Violin", "Trumpet", "Harp", "A", "Those 88 keys are made up of 52 white keys and 36 black keys.", "Yes", "Holdout"],
+  ["Q005", "Easy", "Which gas do plants take in from the air to make their food?", "Oxygen", "Nitrogen", "Carbon dioxide", "Helium", "C", "Plants release oxygen as a byproduct of photosynthesis.", "Yes", "Holdout"],
+  ["Q006", "Easy", "In which country are the Pyramids of Giza?", "Mexico", "Egypt", "Peru", "Greece", "B", "The Great Pyramid was the tallest human-made structure on Earth for thousands of years.", "Yes", "Holdout"],
+  ["Q007", "Easy", "How many sides does a hexagon have?", "5", "7", "6", "8", "C", "Honeybees build their honeycomb cells in hexagon shapes.", "Yes", "Holdout"],
+  ["Q008", "Medium", "Which U.S. state is the largest by area?", "Texas", "California", "Montana", "Alaska", "D", "Alaska is more than twice the size of Texas.", "Yes", "Holdout"],
+  ["Q009", "Medium", "What is the chemical symbol for gold?", "Au", "Ag", "Gd", "Go", "A", "Au comes from the Latin word for gold, aurum.", "Yes", "Holdout"],
+  ["Q010", "Medium", "Who painted the Mona Lisa?", "Michelangelo", "Raphael", "Leonardo da Vinci", "Rembrandt", "C", "The Mona Lisa hangs in the Louvre museum in Paris.", "Yes", "Holdout"],
+  ["Q011", "Medium", "What is the capital of Australia?", "Sydney", "Canberra", "Melbourne", "Perth", "B", "Canberra was built as a compromise because Sydney and Melbourne both wanted to be the capital.", "Yes", "Holdout"],
+  ["Q012", "Medium", "How many strings does a standard violin have?", "4", "5", "6", "8", "A", "A violin's strings are tuned G, D, A, and E.", "Yes", "Holdout"],
+  ["Q013", "Medium", "Which of these is the hardest mineral?", "Topaz", "Quartz", "Talc", "Diamond", "D", "Diamonds are made of pure carbon.", "Yes", "Holdout"],
+  ["Q014", "Medium", "Which organ in the human body produces insulin?", "Liver", "Pancreas", "Kidney", "Spleen", "B", "The pancreas sits tucked behind the stomach.", "Yes", "Holdout"],
+  ["Q015", "Hard", "In what year did the Berlin Wall fall?", "1987", "1991", "1989", "1993", "C", "The wall came down on November 9, 1989.", "Yes", "Holdout"],
+  ["Q016", "Hard", "What is the smallest prime number?", "0", "1", "2", "3", "C", "2 is also the only even prime number.", "Yes", "Holdout"],
+  ["Q017", "Hard", "Which element has atomic number 1?", "Helium", "Hydrogen", "Lithium", "Oxygen", "B", "Hydrogen is the most abundant element in the universe.", "Yes", "Holdout"],
+  ["Q018", "Hard", "Which of these countries is known for having the most lakes?", "Russia", "United States", "Finland", "Canada", "D", "Canada is often said to have more lakes than the rest of the world combined.", "Yes", "Holdout"],
+  ["Q019", "Hard", "What is the longest bone in the human body?", "Femur", "Tibia", "Humerus", "Pelvis", "A", "The femur, or thigh bone, is roughly a quarter of a person's height.", "Yes", "Holdout"],
+  ["Q020", "Hard", "Which composer wrote The Four Seasons?", "Bach", "Handel", "Vivaldi", "Mozart", "C", "Vivaldi was also a priest, nicknamed the Red Priest because of his red hair.", "Yes", "Holdout"],
+  ["Q021", "Hard", "Roughly how fast does light travel?", "18,600 miles per second", "186,000 miles per second", "1,860,000 miles per second", "18,600,000 miles per second", "B", "Light from the Sun takes about 8 minutes to reach Earth.", "Yes", "Holdout"],
+  ["Q022", "Very Hard", "Which is the only U.S. state whose name has just one syllable?", "Utah", "Iowa", "Ohio", "Maine", "D", "Maine is also the only state that borders exactly one other state, New Hampshire.", "Yes", "Holdout"],
+  ["Q023", "Very Hard", "Which letter does not appear in the name of any U.S. state?", "Q", "Z", "X", "J", "A", "J is in New Jersey, X is in Texas, and Z is in Arizona.", "Yes", "Holdout"],
+  ["Q024", "Very Hard", "Which planet has the shortest day?", "Earth", "Saturn", "Jupiter", "Mercury", "C", "Jupiter spins all the way around in about 10 hours.", "Yes", "Holdout"],
+  ["Q025", "Very Hard", "How many bones are in the typical adult human body?", "196", "206", "216", "226", "B", "Babies are born with around 270 bones, and many fuse together as they grow.", "Yes", "Holdout"],
+  ["Q026", "Very Hard", "What is the national animal of Scotland?", "Lion", "Stag", "Eagle", "Unicorn", "D", "The unicorn has appeared on Scotland's royal coat of arms for centuries.", "Yes", "Holdout"],
+  ["Q027", "Very Hard", "Which of these countries has the longest coastline?", "Russia", "Australia", "Canada", "Indonesia", "C", "Canada's coastline touches three oceans: the Atlantic, Pacific, and Arctic.", "Yes", "Holdout"],
+  ["Q028", "Very Hard", "How many hearts does an octopus have?", "2", "3", "1", "4", "B", "Two hearts pump blood to the gills, and the third pumps it to the rest of the body.", "Yes", "Holdout"],
+  ["Q029", "Very Hard", "What is the smallest country in the world by area?", "Monaco", "Vatican City", "San Marino", "Liechtenstein", "B", "Vatican City covers only about 0.17 square miles.", "Yes", "Holdout"],
+  ["Q030", "Very Hard", "Counting both hot and cold deserts, what is the largest desert on Earth?", "Sahara", "Gobi", "Arabian", "Antarctic", "D", "A desert is defined by how little precipitation it gets, not by heat, so frozen Antarctica counts.", "Yes", "Holdout"],
+  ["Q031", "Medium", "Which gas makes up most of Earth's air?", "Oxygen", "Nitrogen", "Argon", "Carbon dioxide", "B", "Nitrogen makes up about 78 percent of the air we breathe.", "Yes", "Holdout"],
+  ["Q032", "Hard", "Which blood type is known as the universal donor for red blood cells?", "AB positive", "A negative", "O negative", "B positive", "C", "Because it can go to almost anyone, O negative is often used in emergencies.", "Yes", "Holdout"],
+  ["Q033", "Medium", "How many half steps (semitones) are in one octave?", "8", "10", "12", "14", "C", "That is why the pattern of black and white keys on a piano repeats every 12 keys.", "Yes", "Holdout"],
+  ["Q034", "Medium", "Which metal is a liquid at room temperature?", "Lead", "Mercury", "Tin", "Aluminum", "B", "Mercury was once widely used in thermometers.", "Yes", "Holdout"],
+  ["Q035", "Easy", "What is the capital of Canada?", "Toronto", "Montreal", "Vancouver", "Ottawa", "D", "Queen Victoria chose Ottawa as the capital in 1857.", "Yes", "Holdout"],
+  ["Q036", "Very Hard", "How many official time zones does China use?", "1", "3", "4", "5", "A", "China stretches across about five geographic time zones but runs everything on Beijing Time.", "Yes", "Holdout"],
+  ["Q037", "Easy", "What color do you get by mixing blue and yellow paint?", "Green", "Purple", "Orange", "Brown", "A", "Red, yellow, and blue are the traditional primary colors used in painting.", "Yes", "Holdout"],
+  ["Q038", "Easy", "How many continents are usually taught in U.S. schools?", "5", "6", "7", "8", "C", "Some countries teach 5 or 6 continents by counting the Americas, or Europe and Asia, as one.", "Yes", "Holdout"],
+  ["Q039", "Easy", "What is the largest planet in our solar system?", "Saturn", "Jupiter", "Neptune", "Earth", "B", "More than 1,000 Earths could fit inside Jupiter.", "Yes", "Holdout"],
+  ["Q040", "Easy", "At what temperature does water freeze in degrees Fahrenheit?", "0", "100", "32", "212", "C", "At sea level, water boils at 212 degrees Fahrenheit.", "Yes", "Holdout"],
+  ["Q041", "Easy", "Which animal is often called the King of the Jungle?", "Tiger", "Elephant", "Lion", "Gorilla", "C", "Despite the nickname, most lions live on grasslands and savannas, not in jungles.", "Yes", "Holdout"],
+  ["Q042", "Easy", "How many days are in a leap year?", "364", "365", "366", "367", "C", "Leap years add February 29 to keep the calendar in step with Earth's trip around the Sun.", "Yes", "Holdout"],
+  ["Q043", "Easy", "What is the capital of France?", "Paris", "Lyon", "Marseille", "Nice", "A", "The Eiffel Tower was built for the 1889 World's Fair in Paris.", "Yes", "Holdout"],
+  ["Q044", "Easy", "Which bird is a well-known symbol of peace?", "Eagle", "Dove", "Crow", "Owl", "B", "Doves and pigeons belong to the same bird family.", "Yes", "Holdout"],
+  ["Q045", "Easy", "What do honeybees make?", "Silk", "Maple syrup", "Cheese", "Honey", "D", "A single honeybee makes only about one-twelfth of a teaspoon of honey in its whole life.", "Yes", "Holdout"],
+  ["Q046", "Easy", "Which ocean lies between the United States and Europe?", "Pacific", "Atlantic", "Indian", "Arctic", "B", "The Atlantic is the second-largest ocean on Earth.", "Yes", "Holdout"],
+  ["Q047", "Easy", "What is the tallest animal in the world?", "Giraffe", "Elephant", "Camel", "Moose", "A", "A giraffe's long neck has seven bones, the same number as a human neck.", "Yes", "Holdout"],
+  ["Q048", "Easy", "Which planet is closest to the Sun?", "Venus", "Mars", "Mercury", "Earth", "C", "A year on Mercury lasts only 88 Earth days.", "Yes", "Holdout"],
+  ["Q049", "Easy", "How many players does one soccer team have on the field at a time?", "9", "10", "12", "11", "D", "That count of 11 includes the goalkeeper.", "Yes", "Holdout"],
+  ["Q050", "Easy", "What is the main ingredient in guacamole?", "Avocado", "Tomato", "Cucumber", "Pea", "A", "Botanically, an avocado is a large berry with a single seed.", "Yes", "Holdout"],
+  ["Q051", "Easy", "Which month has the fewest days?", "January", "February", "April", "November", "B", "February has 28 days, or 29 in a leap year.", "Yes", "Holdout"],
+  ["Q052", "Easy", "Which gas in the air do people need to breathe to stay alive?", "Oxygen", "Helium", "Hydrogen", "Neon", "A", "The air around us is only about 21 percent oxygen.", "Yes", "Holdout"],
+  ["Q053", "Easy", "In which country is the Great Wall?", "China", "Japan", "India", "Korea", "A", "Despite the popular myth, the Great Wall cannot be seen with the naked eye from the Moon.", "Yes", "Holdout"],
+  ["Q054", "Easy", "What is the largest animal on Earth?", "African elephant", "Blue whale", "Giraffe", "Hippopotamus", "B", "A blue whale's heart is roughly the size of a small car.", "Yes", "Holdout"],
+  ["Q055", "Easy", "Which instrument usually has six strings and is often strummed?", "Violin", "Harp", "Cello", "Guitar", "D", "Some guitars have 12 strings, set up in pairs.", "Yes", "Holdout"],
+  ["Q056", "Easy", "What do you call a shape with four equal sides and four right angles?", "Triangle", "Square", "Pentagon", "Octagon", "B", "A square also counts as a rectangle and a rhombus.", "Yes", "Holdout"],
+  ["Q057", "Easy", "Which famous ship sank in 1912 after hitting an iceberg?", "Lusitania", "Mayflower", "Titanic", "Britannic", "C", "The Titanic was on its very first voyage, from Southampton, England, to New York.", "Yes", "Holdout"],
+  ["Q058", "Easy", "What is the capital of the United States?", "New York City", "Washington, D.C.", "Philadelphia", "Boston", "B", "Both New York City and Philadelphia served as the capital before Washington, D.C.", "Yes", "Holdout"],
+  ["Q059", "Easy", "How many legs does an insect have?", "6", "4", "8", "10", "A", "Every insect body has three main parts: the head, thorax, and abdomen.", "Yes", "Holdout"],
+  ["Q060", "Easy", "At what temperature does water boil in degrees Celsius at sea level?", "50", "90", "100", "120", "C", "Water boils at a lower temperature high in the mountains because the air pressure is lower.", "Yes", "Holdout"],
+  ["Q061", "Easy", "Finish the saying: An apple a day keeps the ___ away.", "Dentist", "Doctor", "Teacher", "Rain", "B", "An early version of the saying appeared in Wales in the 1860s.", "Yes", "Holdout"],
+  ["Q062", "Easy", "Who was the first President of the United States?", "Thomas Jefferson", "John Adams", "George Washington", "Abraham Lincoln", "C", "George Washington is the only president who never lived in the White House.", "Yes", "Holdout"],
+  ["Q063", "Easy", "How many colors are in a rainbow, as traditionally listed?", "5", "6", "7", "8", "C", "The traditional list is red, orange, yellow, green, blue, indigo, and violet.", "Yes", "Holdout"],
+  ["Q064", "Easy", "What is the largest country in the world by area?", "Canada", "China", "United States", "Russia", "D", "Russia covers more than one-ninth of all the land on Earth.", "Yes", "Holdout"],
+  ["Q065", "Easy", "Which of your senses depends most on your nose?", "Taste", "Smell", "Touch", "Hearing", "B", "Much of what we think of as taste actually comes from smell.", "Yes", "Holdout"],
+  ["Q066", "Easy", "What does a caterpillar turn into?", "A beetle", "A spider", "A butterfly or moth", "A dragonfly", "C", "Butterflies form a chrysalis, while many moths spin a silk cocoon.", "Yes", "Holdout"],
+  ["Q067", "Medium", "What is the chemical symbol for sodium?", "So", "Sd", "Na", "Sn", "C", "Na comes from natrium, the Latin name for sodium.", "Yes", "Holdout"],
+  ["Q068", "Medium", "Which planet is famous for its Great Red Spot?", "Mars", "Jupiter", "Saturn", "Neptune", "B", "The Great Red Spot is a giant storm wider than Earth.", "Yes", "Holdout"],
+  ["Q069", "Medium", "Who wrote Romeo and Juliet?", "Charles Dickens", "Jane Austen", "Mark Twain", "William Shakespeare", "D", "The play is set in the Italian city of Verona.", "Yes", "Holdout"],
+  ["Q070", "Medium", "What is the smallest planet in our solar system?", "Mercury", "Mars", "Venus", "Earth", "A", "Pluto used to be called the smallest planet until it was reclassified as a dwarf planet in 2006.", "Yes", "Holdout"],
+  ["Q071", "Medium", "What is the capital of Japan?", "Kyoto", "Osaka", "Tokyo", "Hiroshima", "C", "Kyoto was Japan's capital for more than 1,000 years before Tokyo.", "Yes", "Holdout"],
+  ["Q072", "Medium", "Which country gave the Statue of Liberty to the United States?", "France", "England", "Spain", "Italy", "A", "The Statue of Liberty was dedicated in 1886.", "Yes", "Holdout"],
+  ["Q073", "Medium", "What is the longest river in South America?", "Amazon", "Orinoco", "Parana", "Magdalena", "A", "The Amazon carries more water than any other river on Earth.", "Yes", "Holdout"],
+  ["Q074", "Medium", "In what year did people first walk on the Moon?", "1965", "1969", "1972", "1959", "B", "Neil Armstrong and Buzz Aldrin landed on the Moon on July 20, 1969.", "Yes", "Holdout"],
+  ["Q075", "Medium", "Which type of blood cell helps the body fight infections?", "Red blood cells", "White blood cells", "Platelets", "Plasma", "B", "Platelets are the cells that help blood clot when you get a cut.", "Yes", "Holdout"],
+  ["Q076", "Medium", "Which language has the most native speakers in the world?", "English", "Spanish", "Mandarin Chinese", "Hindi", "C", "If you count people who speak it as a second language, English has the most speakers overall.", "Yes", "Holdout"],
+  ["Q077", "Medium", "Which metal has the chemical symbol Fe?", "Lead", "Fluorine", "Tin", "Iron", "D", "Fe comes from ferrum, the Latin word for iron.", "Yes", "Holdout"],
+  ["Q078", "Medium", "How many strings does a standard cello have?", "4", "5", "6", "3", "A", "A cello's strings are tuned C, G, D, and A.", "Yes", "Holdout"],
+  ["Q079", "Medium", "Which painter famously cut off part of his own ear?", "Vincent van Gogh", "Pablo Picasso", "Claude Monet", "Salvador Dali", "A", "Van Gogh sold very few paintings during his lifetime.", "Yes", "Holdout"],
+  ["Q080", "Medium", "What is the Sun mostly made of?", "Oxygen", "Helium", "Hydrogen", "Carbon", "C", "About three-quarters of the Sun's mass is hydrogen.", "Yes", "Holdout"],
+  ["Q081", "Medium", "Which U.S. state is nicknamed the Sunshine State?", "California", "Arizona", "Hawaii", "Florida", "D", "Florida is also home to the Kennedy Space Center.", "Yes", "Holdout"],
+  ["Q082", "Medium", "Which of these is the largest organ of the human body?", "Liver", "Brain", "Skin", "Lungs", "C", "An adult's skin weighs about 8 pounds.", "Yes", "Holdout"],
+  ["Q083", "Medium", "Which scientist developed the theory of relativity?", "Isaac Newton", "Albert Einstein", "Galileo Galilei", "Nikola Tesla", "B", "Einstein's Nobel Prize in 1921 was for the photoelectric effect, not for relativity.", "Yes", "Holdout"],
+  ["Q084", "Medium", "What is the capital of Italy?", "Rome", "Milan", "Venice", "Florence", "A", "Vatican City, the world's smallest country, sits inside Rome.", "Yes", "Holdout"],
+  ["Q085", "Medium", "Which planet rotates on its side?", "Uranus", "Neptune", "Saturn", "Venus", "A", "Uranus is tilted about 98 degrees, so it spins almost on its side.", "Yes", "Holdout"],
+  ["Q086", "Medium", "What is a group of lions called?", "A pride", "A pack", "A herd", "A flock", "A", "A pride usually includes several related females, their cubs, and a few males.", "Yes", "Holdout"],
+  ["Q087", "Medium", "In what year did World War II end?", "1943", "1944", "1945", "1946", "C", "The war ended in Europe in May 1945 and in the Pacific in September 1945.", "Yes", "Holdout"],
+  ["Q088", "Medium", "How many players from one basketball team are on the court at a time?", "4", "6", "7", "5", "D", "Basketball was invented by James Naismith in 1891 using peach baskets.", "Yes", "Holdout"],
+  ["Q089", "Medium", "What is the currency of Japan?", "Yuan", "Won", "Yen", "Ringgit", "C", "The yuan is China's currency, and the won is South Korea's.", "Yes", "Holdout"],
+  ["Q090", "Medium", "Which mountain is the tallest above sea level?", "K2", "Kilimanjaro", "Mount Everest", "Denali", "C", "Mount Everest sits on the border between Nepal and China.", "Yes", "Holdout"],
+  ["Q091", "Medium", "How many degrees are in a right angle?", "45", "90", "180", "360", "B", "The angles inside any triangle always add up to 180 degrees.", "Yes", "Holdout"],
+  ["Q092", "Medium", "Kangaroos are native to which of these countries?", "Australia", "New Zealand", "South Africa", "Argentina", "A", "A baby kangaroo is called a joey.", "Yes", "Holdout"],
+  ["Q093", "Medium", "What color is a ruby?", "Blue", "Green", "Red", "Purple", "C", "Rubies and sapphires are the same mineral, called corundum.", "Yes", "Holdout"],
+  ["Q094", "Medium", "Who painted the ceiling of the Sistine Chapel?", "Leonardo da Vinci", "Michelangelo", "Raphael", "Botticelli", "B", "Michelangelo spent about four years painting the ceiling, from 1508 to 1512.", "Yes", "Holdout"],
+  ["Q095", "Medium", "In which city is the ancient Colosseum?", "Athens", "Rome", "Istanbul", "Paris", "B", "The Colosseum could hold around 50,000 spectators.", "Yes", "Holdout"],
+  ["Q096", "Medium", "What is the square root of 144?", "12", "10", "11", "14", "A", "144 is also called a gross, meaning a dozen dozens.", "Yes", "Holdout"],
+  ["Q097", "Hard", "How many bones are in the middle ear?", "1", "2", "3", "4", "C", "The hammer, anvil, and stirrup are the smallest bones in the human body.", "Yes", "Holdout"],
+  ["Q098", "Hard", "Which is the hottest planet in our solar system?", "Mercury", "Venus", "Mars", "Jupiter", "B", "Venus's thick carbon dioxide atmosphere traps heat, making it even hotter than Mercury.", "Yes", "Holdout"],
+  ["Q099", "Hard", "What is the capital of Turkey?", "Ankara", "Istanbul", "Izmir", "Antalya", "A", "Istanbul is Turkey's largest city, but Ankara has been the capital since 1923.", "Yes", "Holdout"],
+  ["Q100", "Hard", "Who wrote the novel 1984?", "Aldous Huxley", "Ray Bradbury", "George Orwell", "H. G. Wells", "C", "George Orwell's real name was Eric Arthur Blair.", "Yes", "Holdout"],
+  ["Q101", "Hard", "Which element has the chemical symbol K?", "Krypton", "Potassium", "Calcium", "Carbon", "B", "K comes from kalium, the Latin name for potassium.", "Yes", "Holdout"],
+  ["Q102", "Hard", "In what year did Christopher Columbus first reach the Americas?", "1492", "1498", "1507", "1520", "A", "Columbus sailed with three ships: the Nina, the Pinta, and the Santa Maria.", "Yes", "Holdout"],
+  ["Q103", "Hard", "How many symphonies did Beethoven complete?", "5", "7", "9", "12", "C", "Beethoven was almost completely deaf when he wrote his Ninth Symphony.", "Yes", "Holdout"],
+  ["Q104", "Hard", "What is the longest river in Africa?", "Congo", "Niger", "Nile", "Zambezi", "C", "The Nile flows north and empties into the Mediterranean Sea.", "Yes", "Holdout"],
+  ["Q105", "Hard", "Which planet has a moon named Titan?", "Jupiter", "Uranus", "Neptune", "Saturn", "D", "Titan is the only moon known to have a thick atmosphere.", "Yes", "Holdout"],
+  ["Q106", "Hard", "What is the only mammal that can truly fly?", "Flying squirrel", "Sugar glider", "Bat", "Colugo", "C", "Flying squirrels and sugar gliders glide, but they can't truly fly.", "Yes", "Holdout"],
+  ["Q107", "Hard", "Who was the first woman to win a Nobel Prize?", "Marie Curie", "Florence Nightingale", "Rosalind Franklin", "Jane Addams", "A", "Marie Curie won two Nobel Prizes, one in physics and one in chemistry.", "Yes", "Holdout"],
+  ["Q108", "Hard", "How many time zones does Russia have?", "7", "9", "11", "13", "C", "When it is morning in western Russia, it is already evening in the far east.", "Yes", "Holdout"],
+  ["Q109", "Hard", "What is the capital of Brazil?", "Brasilia", "Rio de Janeiro", "Sao Paulo", "Salvador", "A", "Brasilia was built from scratch and became the capital in 1960.", "Yes", "Holdout"],
+  ["Q110", "Hard", "Which composer wrote the Moonlight Sonata?", "Mozart", "Beethoven", "Chopin", "Bach", "B", "The name Moonlight was given by a music critic after Beethoven died.", "Yes", "Holdout"],
+  ["Q111", "Hard", "What is the chemical symbol for silver?", "Si", "Sv", "Ag", "Au", "C", "Ag comes from argentum, the Latin word for silver.", "Yes", "Holdout"],
+  ["Q112", "Hard", "Which ancient wonder stood in Alexandria, Egypt?", "The Colossus", "The Lighthouse", "The Hanging Gardens", "The Temple of Artemis", "B", "The Lighthouse of Alexandria was one of the tallest structures in the world for centuries.", "Yes", "Holdout"],
+  ["Q113", "Hard", "How many players from one baseball team are on the field while their team is on defense?", "8", "10", "11", "9", "D", "Those 9 players include the pitcher and the catcher.", "Yes", "Holdout"],
+  ["Q114", "Hard", "Which planet takes the longest to spin around once?", "Venus", "Mercury", "Mars", "Jupiter", "A", "A single day on Venus is longer than its whole year.", "Yes", "Holdout"],
+  ["Q115", "Hard", "What is the heaviest organ inside the human body?", "Liver", "Heart", "Lungs", "Kidneys", "A", "The liver can grow back after part of it is removed.", "Yes", "Holdout"],
+  ["Q116", "Hard", "In which country did the ancient Olympic Games begin?", "Italy", "Greece", "Egypt", "France", "B", "The ancient Games began in Olympia around 776 BC.", "Yes", "Holdout"],
+  ["Q117", "Hard", "Who received the first U.S. patent for the telephone?", "Thomas Edison", "Nikola Tesla", "Alexander Graham Bell", "Samuel Morse", "C", "Bell received the telephone patent in 1876.", "Yes", "Holdout"],
+  ["Q118", "Hard", "What is the main ingredient in traditional hummus?", "Lentils", "Chickpeas", "Black beans", "Green peas", "B", "Traditional hummus also includes tahini, a paste made from sesame seeds.", "Yes", "Holdout"],
+  ["Q119", "Hard", "How many sides does a dodecagon have?", "12", "10", "14", "20", "A", "Dodeca comes from the Greek word for twelve.", "Yes", "Holdout"],
+  ["Q120", "Hard", "What is the largest moon in our solar system?", "Titan", "Ganymede", "Europa", "Earth's Moon", "B", "Ganymede, one of Jupiter's moons, is bigger than the planet Mercury.", "Yes", "Holdout"],
+  ["Q121", "Hard", "Which physicist wrote A Brief History of Time?", "Carl Sagan", "Neil deGrasse Tyson", "Richard Feynman", "Stephen Hawking", "D", "The book was first published in 1988.", "Yes", "Holdout"],
+  ["Q122", "Hard", "What city is the seat of Switzerland's government?", "Zurich", "Geneva", "Bern", "Basel", "C", "Switzerland officially calls Bern its federal city rather than its capital.", "Yes", "Holdout"],
+  ["Q123", "Hard", "Phobos is a moon of which planet?", "Mars", "Jupiter", "Venus", "Saturn", "A", "Phobos is slowly spiraling closer to Mars.", "Yes", "Holdout"],
+  ["Q124", "Hard", "What is the tallest uninterrupted waterfall in the world?", "Niagara Falls", "Victoria Falls", "Angel Falls", "Iguazu Falls", "C", "Angel Falls in Venezuela drops about 3,200 feet.", "Yes", "Holdout"],
+  ["Q125", "Hard", "How many teeth does a typical adult have, counting wisdom teeth?", "28", "30", "32", "36", "C", "Many adults have some or all of their four wisdom teeth removed.", "Yes", "Holdout"],
+  ["Q126", "Hard", "Who painted The Starry Night?", "Claude Monet", "Vincent van Gogh", "Rembrandt", "Paul Cezanne", "B", "Van Gogh painted it in 1889 while staying at an asylum in southern France.", "Yes", "Holdout"],
+  ["Q127", "Very Hard", "What is the smallest bone in the human body?", "Incus", "Stapes", "Malleus", "Coccyx", "B", "The stapes, or stirrup, is about the size of a grain of rice.", "Yes", "Holdout"],
+  ["Q128", "Very Hard", "What is the capital of New Zealand?", "Auckland", "Christchurch", "Wellington", "Queenstown", "C", "Wellington is the southernmost capital city of any country.", "Yes", "Holdout"],
+  ["Q129", "Very Hard", "How many strings does a standard concert pedal harp have?", "36", "41", "47", "52", "C", "Harpists use seven foot pedals to change the pitch of the strings.", "Yes", "Holdout"],
+  ["Q130", "Very Hard", "In what year did the American Civil War end?", "1861", "1863", "1865", "1868", "C", "General Lee surrendered at Appomattox Court House in April 1865.", "Yes", "Holdout"],
+  ["Q131", "Very Hard", "Who composed the music for the ballet The Nutcracker?", "Rachmaninoff", "Stravinsky", "Prokofiev", "Tchaikovsky", "D", "The Nutcracker premiered in St. Petersburg in 1892.", "Yes", "Holdout"],
+  ["Q132", "Very Hard", "What is the chemical symbol for tungsten?", "T", "Tu", "W", "Tn", "C", "W comes from wolfram, another name for tungsten.", "Yes", "Holdout"],
+  ["Q133", "Very Hard", "Which continent has no permanent human residents?", "Australia", "Antarctica", "Europe", "South America", "B", "The only people living in Antarctica are scientists and staff who stay for a few months at a time.", "Yes", "Holdout"],
+  ["Q134", "Very Hard", "What is the largest species of shark?", "Great white shark", "Whale shark", "Basking shark", "Tiger shark", "B", "Despite its size, the whale shark eats mostly plankton.", "Yes", "Holdout"],
+  ["Q135", "Very Hard", "Which U.S. state has the longest coastline?", "California", "Florida", "Alaska", "Hawaii", "C", "Alaska has more coastline than all the other states combined.", "Yes", "Holdout"],
+  ["Q136", "Very Hard", "Which planet was found by math before anyone saw it in a telescope?", "Uranus", "Neptune", "Saturn", "Mars", "B", "Astronomers spotted Neptune in 1846, right where the math said it would be.", "Yes", "Holdout"],
+  ["Q137", "Very Hard", "Who wrote The Canterbury Tales?", "John Milton", "Edmund Spenser", "Geoffrey Chaucer", "Thomas Malory", "C", "Chaucer wrote The Canterbury Tales in the late 1300s.", "Yes", "Holdout"],
+  ["Q138", "Very Hard", "What is the largest lake in Africa?", "Lake Tanganyika", "Lake Malawi", "Lake Chad", "Lake Victoria", "D", "Lake Victoria is shared by Uganda, Kenya, and Tanzania.", "Yes", "Holdout"],
+  ["Q139", "Very Hard", "Where is the deepest known point in Earth's oceans?", "Puerto Rico Trench", "Mariana Trench", "Java Trench", "Tonga Trench", "B", "The deepest part of the Mariana Trench, called the Challenger Deep, is nearly 7 miles down.", "Yes", "Holdout"],
+  ["Q140", "Very Hard", "How many official national languages does Switzerland have?", "2", "3", "4", "5", "C", "They are German, French, Italian, and Romansh.", "Yes", "Holdout"],
+  ["Q141", "Very Hard", "Which number, written in English, has its letters in alphabetical order?", "Fifty", "Seventy", "Eighty", "Forty", "D", "F, O, R, T, Y: each letter comes later in the alphabet than the one before it.", "Yes", "Holdout"],
+  ["Q142", "Very Hard", "Who was the second person to walk on the Moon?", "Michael Collins", "Pete Conrad", "Buzz Aldrin", "Alan Shepard", "C", "Michael Collins stayed in orbit, flying the command module, while the others walked on the Moon.", "Yes", "Holdout"],
+  ["Q143", "Very Hard", "What is the most common element in Earth's crust?", "Silicon", "Oxygen", "Iron", "Aluminum", "B", "Most of that oxygen is locked inside rocks and minerals.", "Yes", "Holdout"],
+  ["Q144", "Very Hard", "How many light and dark squares make up a standard chessboard?", "48", "56", "64", "72", "C", "Count every size of square, from 1-by-1 up to the full 8-by-8 board, and there are 204.", "Yes", "Holdout"],
+  ["Q145", "Very Hard", "Which musical closed in 2023 as the longest-running show in Broadway history?", "Chicago", "The Lion King", "The Phantom of the Opera", "Cats", "C", "The Phantom of the Opera ran on Broadway for 35 years, from 1988 to 2023.", "Yes", "Holdout"],
+  ["Q146", "Very Hard", "Which planet has the fastest winds in the solar system?", "Jupiter", "Saturn", "Neptune", "Uranus", "C", "Winds on Neptune can blow faster than 1,000 miles per hour.", "Yes", "Holdout"],
+  ["Q147", "Very Hard", "Which bird can fly backward?", "Swift", "Kingfisher", "Sparrow", "Hummingbird", "D", "Some hummingbirds beat their wings more than 50 times per second.", "Yes", "Holdout"],
+  ["Q148", "Very Hard", "What is the capital of Morocco?", "Casablanca", "Marrakesh", "Rabat", "Fez", "C", "Casablanca is Morocco's largest city.", "Yes", "Holdout"],
+  ["Q149", "Very Hard", "How many moons does Mars have?", "0", "1", "2", "3", "C", "The two moons of Mars are named Phobos and Deimos.", "Yes", "Holdout"],
+  ["Q150", "Very Hard", "Besides mercury, which element is a liquid at room temperature?", "Chlorine", "Bromine", "Iodine", "Fluorine", "B", "Bromine is a reddish-brown liquid with a strong smell.", "Yes", "Holdout"],
+  ["Q151", "Very Hard", "What is the longest river in Europe?", "Danube", "Rhine", "Volga", "Dnieper", "C", "The Volga flows through Russia and empties into the Caspian Sea.", "Yes", "Holdout"],
+  ["Q152", "Very Hard", "How many amendments make up the U.S. Bill of Rights?", "5", "10", "12", "27", "B", "The Constitution has 27 amendments in total.", "Yes", "Holdout"],
+  ["Q153", "Very Hard", "What is the tallest mountain in Africa?", "Mount Kenya", "Mount Toubkal", "Mount Stanley", "Mount Kilimanjaro", "D", "Kilimanjaro is a dormant volcano in Tanzania.", "Yes", "Holdout"],
+  ["Q154", "Very Hard", "Which planet in our solar system is the densest?", "Jupiter", "Earth", "Mercury", "Venus", "B", "Saturn is the least dense planet. It is less dense than water.", "Yes", "Holdout"],
+  ["Q155", "Very Hard", "What is the largest living bird?", "Emu", "Albatross", "Ostrich", "Cassowary", "C", "An ostrich egg is the largest egg laid by any living bird.", "Yes", "Holdout"],
+  ["Q156", "Very Hard", "Which mathematician wrote the famous 'last theorem' that went unproven for more than 350 years?", "Leonhard Euler", "Pierre de Fermat", "Carl Friedrich Gauss", "Blaise Pascal", "B", "Andrew Wiles finally proved it in the mid-1990s.", "Yes", "Holdout"],
+  ["Q157", "Easy", "How many sides does a pentagon have?", "4", "5", "6", "8", "B", "The Pentagon building near Washington, D.C., has five sides.", "Yes", "Holdout"],
+  ["Q158", "Easy", "Which animal is famous for building dams in rivers?", "Otter", "Muskrat", "Raccoon", "Beaver", "D", "A beaver's front teeth never stop growing.", "Yes", "Holdout"],
+  ["Q159", "Easy", "In which direction does the Sun rise?", "North", "East", "South", "West", "B", "It rises exactly due east only around the spring and fall equinoxes.", "Yes", "Holdout"],
+  ["Q160", "Easy", "How many hours are in a day?", "12", "24", "20", "36", "B", "Measured against the stars, one spin of Earth takes about 23 hours and 56 minutes.", "Yes", "Holdout"],
+  ["Q161", "Easy", "What is a baby cat called?", "Kitten", "Pup", "Cub", "Calf", "A", "Kittens are born with their eyes closed.", "Yes", "Holdout"],
+  ["Q162", "Easy", "What is the closest star to Earth?", "Polaris", "Sirius", "The Sun", "Betelgeuse", "C", "The next closest star, Proxima Centauri, is about 4.2 light-years away.", "Yes", "Holdout"],
+  ["Q163", "Easy", "How many wheels does a tricycle have?", "2", "4", "5", "3", "D", "Tri means three, as in triangle and tripod.", "Yes", "Holdout"],
+  ["Q164", "Easy", "Which yellow fruit is long and curved?", "Apple", "Grape", "Cherry", "Banana", "D", "Botanically, bananas are berries.", "Yes", "Holdout"],
+  ["Q165", "Easy", "Which season comes after summer?", "Winter", "Spring", "Monsoon", "Fall (autumn)", "D", "In the Southern Hemisphere, the seasons are flipped.", "Yes", "Holdout"],
+  ["Q166", "Easy", "What is H2O more commonly called?", "Salt", "Water", "Sugar", "Air", "B", "Each water molecule has two hydrogen atoms and one oxygen atom.", "Yes", "Holdout"],
+  ["Q167", "Easy", "What do you call a group of fish swimming together?", "A flock", "A herd", "A pack", "A school", "D", "Fish in a school often move in sync to confuse predators.", "Yes", "Holdout"],
+  ["Q168", "Easy", "Which shape is round and has no corners?", "Square", "Triangle", "Rectangle", "Circle", "D", "The distance around a circle is called its circumference.", "Yes", "Holdout"],
+  ["Q169", "Easy", "What is the capital of England?", "London", "Manchester", "Liverpool", "Oxford", "A", "Big Ben is the nickname of the great bell, not the clock tower.", "Yes", "Holdout"],
+  ["Q170", "Easy", "What color do you get by mixing red and white paint?", "Purple", "Orange", "Brown", "Pink", "D", "Adding white to any color makes a lighter version called a tint.", "Yes", "Holdout"],
+  ["Q171", "Easy", "What is a baby dog called?", "Kitten", "Puppy", "Foal", "Lamb", "B", "Puppies are born with their eyes and ears closed.", "Yes", "Holdout"],
+  ["Q172", "Easy", "Which planet is famous for its bright rings?", "Mars", "Saturn", "Mercury", "Venus", "B", "Saturn's rings are made mostly of chunks of ice.", "Yes", "Holdout"],
+  ["Q173", "Easy", "How many days are in a week?", "5", "7", "6", "8", "B", "Several days of the week are named after Norse gods, like Thursday after Thor.", "Yes", "Holdout"],
+  ["Q174", "Easy", "Which holiday is celebrated on December 25?", "Christmas", "Halloween", "Thanksgiving", "Easter", "A", "Many countries also celebrate Boxing Day on December 26.", "Yes", "Holdout"],
+  ["Q175", "Easy", "What is the main language spoken in Mexico?", "Spanish", "Portuguese", "French", "English", "A", "Mexico has more Spanish speakers than any other country.", "Yes", "Holdout"],
+  ["Q176", "Easy", "How many minutes are in an hour?", "60", "30", "90", "100", "A", "The 60-minute hour comes from ancient Babylonian counting, which was based on 60.", "Yes", "Holdout"],
+  ["Q177", "Easy", "What color is an emerald?", "Red", "Blue", "Green", "Yellow", "C", "Emeralds are a green form of the mineral beryl.", "Yes", "Holdout"],
+  ["Q178", "Easy", "Which bird is famous for fanning out a colorful tail?", "Crow", "Peacock", "Robin", "Pigeon", "B", "Only the males, called peacocks, have the big colorful tails.", "Yes", "Holdout"],
+  ["Q179", "Easy", "What do plants need from the Sun to make their food?", "Light", "Sound", "Wind", "Snow", "A", "The process plants use is called photosynthesis.", "Yes", "Holdout"],
+  ["Q180", "Easy", "Bamboo is a giant type of what plant?", "Tree", "Fern", "Grass", "Cactus", "C", "Some bamboo can grow nearly 3 feet in a single day.", "Yes", "Holdout"],
+  ["Q181", "Easy", "How many strings does a standard ukulele have?", "3", "4", "6", "8", "B", "The ukulele grew popular in Hawaii in the late 1800s.", "Yes", "Holdout"],
+  ["Q182", "Easy", "What is the largest land animal?", "African elephant", "Rhinoceros", "Hippopotamus", "Giraffe", "A", "An adult male African elephant can weigh more than 6 tons.", "Yes", "Holdout"],
+  ["Q183", "Easy", "What do bees collect from flowers to make honey?", "Pollen", "Nectar", "Sap", "Dew", "B", "Bees also collect pollen, but they use it as food, not to make honey.", "Yes", "Holdout"],
+  ["Q184", "Easy", "Which is the coldest continent?", "Asia", "Antarctica", "Europe", "North America", "B", "The coldest air temperature ever measured, about minus 128.6 degrees Fahrenheit, was in Antarctica.", "Yes", "Holdout"],
+  ["Q185", "Easy", "Which toy bricks were invented in Denmark?", "LEGO", "K'NEX", "Lincoln Logs", "Tinkertoy", "A", "LEGO comes from the Danish words leg godt, meaning play well.", "Yes", "Holdout"],
+  ["Q186", "Easy", "How many cents is a U.S. quarter worth?", "10", "20", "25", "50", "C", "A U.S. dime is worth 10 cents.", "Yes", "Holdout"],
+  ["Q187", "Easy", "Which is the smallest ocean?", "Indian", "Southern", "Atlantic", "Arctic", "D", "Much of the Arctic Ocean is covered by sea ice for most of the year.", "Yes", "Holdout"],
+  ["Q188", "Easy", "What gives plants their green color?", "Carotene", "Melanin", "Chlorophyll", "Hemoglobin", "C", "In fall, chlorophyll breaks down and other colors in leaves show through.", "Yes", "Holdout"],
+  ["Q189", "Easy", "Which animal is famous for changing color to blend in?", "Iguana", "Salamander", "Toad", "Chameleon", "D", "Chameleons also change color to show their mood and control their temperature.", "Yes", "Holdout"],
+  ["Q190", "Easy", "How many players from one volleyball team are on the court at a time?", "6", "5", "7", "9", "A", "Volleyball was invented in Massachusetts in 1895.", "Yes", "Holdout"],
+  ["Q191", "Easy", "What is the main ingredient in most bread?", "Rice", "Flour", "Corn syrup", "Butter", "B", "Yeast makes bread rise by giving off tiny bubbles of gas.", "Yes", "Holdout"],
+  ["Q192", "Easy", "Which planet is often called Earth's twin because of its similar size?", "Mars", "Venus", "Mercury", "Neptune", "B", "Venus is almost exactly the same size as Earth.", "Yes", "Holdout"],
+  ["Q193", "Easy", "What does a thermometer measure?", "Wind", "Temperature", "Rain", "Weight", "B", "Early thermometers were filled with alcohol or mercury.", "Yes", "Holdout"],
+  ["Q194", "Easy", "Which animal is the fastest on land?", "Lion", "Cheetah", "Horse", "Greyhound", "B", "Cheetahs can reach about 60 to 70 miles per hour in short bursts.", "Yes", "Holdout"],
+  ["Q195", "Easy", "How many planets are in our solar system?", "7", "8", "9", "10", "B", "There were nine until Pluto was reclassified as a dwarf planet in 2006.", "Yes", "Holdout"],
+  ["Q196", "Easy", "Which famous detective lived at 221B Baker Street?", "Sherlock Holmes", "Hercule Poirot", "Nancy Drew", "Miss Marple", "A", "Sherlock Holmes was created by Arthur Conan Doyle.", "Yes", "Holdout"],
+  ["Q197", "Easy", "Who wrote Green Eggs and Ham?", "Dr. Seuss", "Roald Dahl", "Shel Silverstein", "Maurice Sendak", "A", "Dr. Seuss wrote it using only 50 different words.", "Yes", "Holdout"],
+  ["Q198", "Easy", "What color are most school buses in the United States?", "Red", "Blue", "Yellow", "Green", "C", "The bright color helps buses stand out in early morning light.", "Yes", "Holdout"],
+  ["Q199", "Easy", "Which country is shaped like a boot?", "Spain", "Italy", "Greece", "Portugal", "B", "The island of Sicily sits just off the toe of the boot.", "Yes", "Holdout"],
+  ["Q200", "Easy", "What is a baby frog called?", "Cub", "Kit", "Tadpole", "Fawn", "C", "Tadpoles breathe through gills, like fish.", "Yes", "Holdout"],
+  ["Q201", "Easy", "How many sides does an octagon have?", "6", "7", "10", "8", "D", "Stop signs in the United States are octagons.", "Yes", "Holdout"],
+  ["Q202", "Easy", "Which part of a plant usually grows underground?", "Leaves", "Petals", "Flowers", "Roots", "D", "Roots soak up water and nutrients from the soil.", "Yes", "Holdout"],
+  ["Q203", "Easy", "What is the capital of Spain?", "Madrid", "Barcelona", "Seville", "Valencia", "A", "Madrid sits near the middle of Spain.", "Yes", "Holdout"],
+  ["Q204", "Easy", "Which animal is called the ship of the desert?", "Horse", "Donkey", "Camel", "Llama", "C", "A camel's hump stores fat, not water.", "Yes", "Holdout"],
+  ["Q205", "Easy", "What do you call a scientist who studies stars and planets?", "Astrologer", "Geologist", "Astronomer", "Botanist", "C", "Galileo was one of the first people to study the sky with a telescope.", "Yes", "Holdout"],
+  ["Q206", "Easy", "Which color mixes with yellow to make orange?", "Blue", "Green", "Purple", "Red", "D", "Red, yellow, and blue are the traditional primary colors in painting.", "Yes", "Holdout"],
+  ["Q207", "Easy", "How many letters are in the English alphabet?", "26", "24", "25", "28", "A", "E is the most commonly used letter in English.", "Yes", "Holdout"],
+  ["Q208", "Easy", "What is the capital of Germany?", "Munich", "Hamburg", "Berlin", "Frankfurt", "C", "Bonn was the capital of West Germany before the country reunified.", "Yes", "Holdout"],
+  ["Q209", "Easy", "What kind of animal is a Komodo dragon?", "Snake", "Crocodile", "Lizard", "Dinosaur", "C", "Komodo dragons are the largest living lizards.", "Yes", "Holdout"],
+  ["Q210", "Easy", "Which sport uses a puck?", "Soccer", "Basketball", "Ice hockey", "Tennis", "C", "Hockey pucks are often frozen before games so they bounce less.", "Yes", "Holdout"],
+  ["Q211", "Easy", "At what temperature does water freeze in degrees Celsius?", "-10", "10", "0", "32", "C", "That's the same as 32 degrees Fahrenheit.", "Yes", "Holdout"],
+  ["Q212", "Easy", "Which organ pumps blood through your body?", "Lungs", "Liver", "Stomach", "Heart", "D", "An adult heart beats about 100,000 times a day.", "Yes", "Holdout"],
+  ["Q213", "Easy", "What is the name of our galaxy?", "The Milky Way", "Andromeda", "Whirlpool", "Sombrero", "A", "The Andromeda galaxy is our closest large neighbor.", "Yes", "Holdout"],
+  ["Q214", "Easy", "Which fairy tale character leaves behind a glass slipper?", "Snow White", "Rapunzel", "Little Red Riding Hood", "Cinderella", "D", "Versions of the Cinderella story have been told for centuries around the world.", "Yes", "Holdout"],
+  ["Q215", "Easy", "What is a baby horse called?", "Calf", "Kid", "Joey", "Foal", "D", "Foals can usually stand within an hour or two of being born.", "Yes", "Holdout"],
+  ["Q216", "Easy", "How many years are in a century?", "10", "50", "100", "1,000", "C", "A period of 1,000 years is called a millennium.", "Yes", "Holdout"],
+  ["Q217", "Easy", "Which U.S. state is home to Hollywood?", "California", "Nevada", "Texas", "Florida", "A", "Hollywood is a neighborhood in the city of Los Angeles.", "Yes", "Holdout"],
+  ["Q218", "Easy", "What is the national bird of the United States?", "Wild turkey", "Bald eagle", "Robin", "Great horned owl", "B", "Benjamin Franklin once praised the turkey as a more respectable bird.", "Yes", "Holdout"],
+  ["Q219", "Easy", "How many inches are in a foot?", "10", "12", "16", "36", "B", "Three feet make a yard.", "Yes", "Holdout"],
+  ["Q220", "Easy", "Which scientist is famous for the laws of motion and gravity?", "Isaac Newton", "Albert Einstein", "Charles Darwin", "Galileo Galilei", "A", "The story of a falling apple inspiring Newton comes from his own later accounts.", "Yes", "Holdout"],
+  ["Q221", "Easy", "What do you call a shape with three sides?", "Triangle", "Square", "Pentagon", "Circle", "A", "The angles inside a triangle always add up to 180 degrees.", "Yes", "Holdout"],
+  ["Q222", "Easy", "Which black-and-white animal eats mostly bamboo?", "Giant panda", "Koala", "Raccoon", "Skunk", "A", "Giant pandas spend about half of each day eating.", "Yes", "Holdout"],
+  ["Q223", "Easy", "What is the name of the fairy in Peter Pan?", "Flora", "Fauna", "Merryweather", "Tinker Bell", "D", "Peter Pan was created by Scottish author J. M. Barrie.", "Yes", "Holdout"],
+  ["Q224", "Easy", "Which metal are magnets strongly attracted to?", "Gold", "Copper", "Aluminum", "Iron", "D", "Nickel and cobalt are also attracted to magnets.", "Yes", "Holdout"],
+  ["Q225", "Easy", "What is the main ingredient in french fries?", "Carrots", "Rice", "Potatoes", "Corn", "C", "Potatoes were first grown in South America.", "Yes", "Holdout"],
+  ["Q226", "Easy", "What is the capital of Russia?", "St. Petersburg", "Moscow", "Kazan", "Sochi", "B", "St. Petersburg was Russia's capital for about 200 years.", "Yes", "Holdout"],
+  ["Q227", "Easy", "In which ocean are the Hawaiian Islands?", "Atlantic", "Indian", "Pacific", "Arctic", "C", "Hawaii is the only U.S. state made up entirely of islands.", "Yes", "Holdout"],
+  ["Q228", "Easy", "What is an adult male deer often called?", "Doe", "Fawn", "Mare", "Buck", "D", "A female deer is called a doe, and a baby is a fawn.", "Yes", "Holdout"],
+  ["Q229", "Easy", "Which brass instrument changes pitch with a slide?", "Trumpet", "Trombone", "Tuba", "French horn", "B", "Moving the slide out makes the notes lower.", "Yes", "Holdout"],
+  ["Q230", "Easy", "How many centimeters are in a meter?", "10", "12", "100", "1,000", "C", "Centi means one hundredth.", "Yes", "Holdout"],
+  ["Q231", "Easy", "What is a group of wolves called?", "A pack", "A pride", "A school", "A flock", "A", "A wolf pack is usually a family group.", "Yes", "Holdout"],
+  ["Q232", "Medium", "In which country is Machu Picchu?", "Mexico", "Chile", "Bolivia", "Peru", "D", "Machu Picchu was built by the Inca in the 1400s.", "Yes", "Holdout"],
+  ["Q233", "Medium", "What is the capital of Egypt?", "Alexandria", "Cairo", "Luxor", "Giza", "B", "Cairo sits on the banks of the Nile.", "Yes", "Holdout"],
+  ["Q234", "Medium", "Who painted The Last Supper?", "Michelangelo", "Leonardo da Vinci", "Raphael", "Caravaggio", "B", "It was painted on a wall of a monastery dining hall in Milan.", "Yes", "Holdout"],
+  ["Q235", "Medium", "What is the largest volcano in our solar system?", "Mauna Kea", "Olympus Mons", "Mount Etna", "Mount Fuji", "B", "Olympus Mons on Mars is about two and a half times taller than Mount Everest.", "Yes", "Holdout"],
+  ["Q236", "Medium", "What is the chemical symbol for helium?", "H", "Hl", "He", "Hm", "C", "Helium is lighter than air, which is why helium balloons float.", "Yes", "Holdout"],
+  ["Q237", "Medium", "Who wrote Pride and Prejudice?", "Jane Austen", "Charlotte Bronte", "Mary Shelley", "Emily Dickinson", "A", "Pride and Prejudice was first published in 1813.", "Yes", "Holdout"],
+  ["Q238", "Medium", "How many sides does a heptagon have?", "6", "8", "9", "7", "D", "Hepta comes from the Greek word for seven.", "Yes", "Holdout"],
+  ["Q239", "Medium", "Which planet has a day only a little longer than Earth's?", "Venus", "Mercury", "Mars", "Jupiter", "C", "A day on Mars lasts about 24 hours and 37 minutes.", "Yes", "Holdout"],
+  ["Q240", "Medium", "What is the capital of Greece?", "Athens", "Sparta", "Thessaloniki", "Corinth", "A", "The Parthenon in Athens was finished in 432 BC.", "Yes", "Holdout"],
+  ["Q241", "Medium", "Which scientist is famous for the theory of evolution by natural selection?", "Gregor Mendel", "Louis Pasteur", "Isaac Newton", "Charles Darwin", "D", "His ideas were shaped by his voyage on the ship HMS Beagle.", "Yes", "Holdout"],
+  ["Q242", "Medium", "What is the capital of South Korea?", "Busan", "Incheon", "Pyongyang", "Seoul", "D", "About half of South Korea's people live in or around Seoul.", "Yes", "Holdout"],
+  ["Q243", "Medium", "How many bones are in one adult human hand?", "19", "27", "32", "45", "B", "Your two hands together hold more than a quarter of all the bones in your body.", "Yes", "Holdout"],
+  ["Q244", "Medium", "Which ship carried the Pilgrims to America in 1620?", "Santa Maria", "Endeavour", "Beagle", "Mayflower", "D", "The Pilgrims settled at Plymouth in what is now Massachusetts.", "Yes", "Holdout"],
+  ["Q245", "Medium", "What is the currency of the United Kingdom?", "Euro", "Franc", "Krona", "Pound sterling", "D", "The United Kingdom never switched to the euro.", "Yes", "Holdout"],
+  ["Q246", "Medium", "Who was the 16th President of the United States?", "George Washington", "Abraham Lincoln", "Thomas Jefferson", "Ulysses S. Grant", "B", "Lincoln gave the Gettysburg Address in 1863.", "Yes", "Holdout"],
+  ["Q247", "Medium", "Which element has the chemical symbol C?", "Carbon", "Calcium", "Copper", "Chlorine", "A", "Diamonds and pencil graphite are both made of carbon.", "Yes", "Holdout"],
+  ["Q248", "Medium", "What is the capital of Kenya?", "Mombasa", "Nairobi", "Kampala", "Addis Ababa", "B", "Nairobi has a national park with lions and giraffes inside the city limits.", "Yes", "Holdout"],
+  ["Q249", "Medium", "What is the largest city in Canada?", "Toronto", "Vancouver", "Montreal", "Ottawa", "A", "Toronto is the capital of the province of Ontario.", "Yes", "Holdout"],
+  ["Q250", "Medium", "In tennis, what is a score of zero called?", "Love", "Nil", "Zero", "Duck", "A", "Nobody knows for sure where the word love in tennis came from.", "Yes", "Holdout"],
+  ["Q251", "Medium", "Which organ makes bile to help digest fat?", "Pancreas", "Kidney", "Liver", "Stomach", "C", "Bile is stored in the gallbladder until it's needed.", "Yes", "Holdout"],
+  ["Q252", "Medium", "Which Canadian province makes most of the world's maple syrup?", "Ontario", "British Columbia", "Alberta", "Quebec", "D", "It takes about 40 gallons of sap to make 1 gallon of maple syrup.", "Yes", "Holdout"],
+  ["Q253", "Medium", "Who discovered penicillin?", "Louis Pasteur", "Alexander Fleming", "Jonas Salk", "Edward Jenner", "B", "Fleming noticed it in 1928 when mold killed bacteria in a dish.", "Yes", "Holdout"],
+  ["Q254", "Medium", "Which planet is often called the Morning Star?", "Mars", "Jupiter", "Venus", "Mercury", "C", "Venus is the brightest planet in our night sky.", "Yes", "Holdout"],
+  ["Q255", "Medium", "Who wrote The Adventures of Tom Sawyer?", "Charles Dickens", "Jack London", "Herman Melville", "Mark Twain", "D", "Mark Twain's real name was Samuel Clemens.", "Yes", "Holdout"],
+  ["Q256", "Medium", "What is the capital of Argentina?", "Buenos Aires", "Santiago", "Lima", "Montevideo", "A", "Buenos Aires is known as the birthplace of the tango.", "Yes", "Holdout"],
+  ["Q257", "Medium", "Which of these animals can doze while standing up?", "Dog", "Cat", "Horse", "Rabbit", "C", "Horses have a locking system in their legs that lets them rest standing up.", "Yes", "Holdout"],
+  ["Q258", "Medium", "How many strings does a standard bass guitar have?", "4", "3", "6", "8", "A", "Its four strings are usually tuned like the lowest four strings of a guitar.", "Yes", "Holdout"],
+  ["Q259", "Medium", "Europa is a moon of which planet?", "Saturn", "Uranus", "Neptune", "Jupiter", "D", "Scientists think Europa has a huge ocean under its icy surface.", "Yes", "Holdout"],
+  ["Q260", "Medium", "Which city is nicknamed the Big Apple?", "Chicago", "Boston", "Los Angeles", "New York City", "D", "The nickname became popular through a 1970s tourism campaign.", "Yes", "Holdout"],
+  ["Q261", "Medium", "In what year was the Declaration of Independence adopted?", "1765", "1783", "1776", "1789", "C", "It was adopted on July 4, 1776.", "Yes", "Holdout"],
+  ["Q262", "Medium", "What language do most people speak in Brazil?", "Spanish", "French", "Portuguese", "Italian", "C", "Brazil is the largest Portuguese-speaking country in the world.", "Yes", "Holdout"],
+  ["Q263", "Medium", "Which of these is the largest island?", "Borneo", "Madagascar", "Greenland", "New Guinea", "C", "Greenland is part of the Kingdom of Denmark.", "Yes", "Holdout"],
+  ["Q264", "Medium", "What is the chemical formula for table salt?", "KCl", "NaCl", "H2O", "CO2", "B", "Table salt is made of sodium and chlorine.", "Yes", "Holdout"],
+  ["Q265", "Medium", "What is the capital of India?", "Mumbai", "Kolkata", "New Delhi", "Bangalore", "C", "New Delhi became India's capital in 1931.", "Yes", "Holdout"],
+  ["Q266", "Medium", "Which instrument did Louis Armstrong famously play?", "Trumpet", "Saxophone", "Clarinet", "Piano", "A", "Armstrong was also famous for his gravelly singing voice.", "Yes", "Holdout"],
+  ["Q267", "Medium", "Which planet is the farthest from the Sun?", "Uranus", "Saturn", "Neptune", "Jupiter", "C", "Neptune takes about 165 Earth years to circle the Sun once.", "Yes", "Holdout"],
+  ["Q268", "Medium", "Where was paper first invented?", "Egypt", "China", "Greece", "India", "B", "Papermaking spread from China along trade routes over many centuries.", "Yes", "Holdout"],
+  ["Q269", "Medium", "What is the capital of Ireland?", "Cork", "Galway", "Dublin", "Limerick", "C", "Dublin sits where the River Liffey meets the Irish Sea.", "Yes", "Holdout"],
+  ["Q270", "Medium", "Which of these is the largest muscle in the human body?", "Biceps", "Deltoid", "Gluteus maximus", "Heart", "C", "It is the main muscle in your buttocks.", "Yes", "Holdout"],
+  ["Q271", "Medium", "Who painted the melting clocks in The Persistence of Memory?", "Pablo Picasso", "Rene Magritte", "Joan Miro", "Salvador Dali", "D", "The painting is only about 9.5 by 13 inches.", "Yes", "Holdout"],
+  ["Q272", "Medium", "What does DNA stand for?", "Dinitrogen acid", "Double nucleic acid", "Dynamic nuclear acid", "Deoxyribonucleic acid", "D", "DNA's double-helix shape was described in 1953.", "Yes", "Holdout"],
+  ["Q273", "Medium", "Which U.S. state is nicknamed the Lone Star State?", "Arizona", "Oklahoma", "Texas", "Nevada", "C", "Texas was an independent republic from 1836 to 1845.", "Yes", "Holdout"],
+  ["Q274", "Medium", "What is a group of crows called?", "A pride", "A school", "A murder", "A gaggle", "C", "A group of geese on the ground is called a gaggle.", "Yes", "Holdout"],
+  ["Q275", "Medium", "What is the capital of Thailand?", "Phuket", "Chiang Mai", "Bangkok", "Hanoi", "C", "Bangkok's full ceremonial name is one of the longest place names in the world.", "Yes", "Holdout"],
+  ["Q276", "Medium", "Who was the first person to walk on the Moon?", "Buzz Aldrin", "Yuri Gagarin", "John Glenn", "Neil Armstrong", "D", "Armstrong stepped onto the Moon on July 20, 1969.", "Yes", "Holdout"],
+  ["Q277", "Medium", "What is the square root of 81?", "9", "7", "8", "11", "A", "81 is also 3 times 3 times 3 times 3.", "Yes", "Holdout"],
+  ["Q278", "Medium", "Which famous composer was born in Salzburg, Austria?", "Beethoven", "Mozart", "Bach", "Haydn", "B", "Mozart began composing when he was about five years old.", "Yes", "Holdout"],
+  ["Q279", "Medium", "What is the capital of Portugal?", "Porto", "Madrid", "Lisbon", "Faro", "C", "Lisbon is one of the oldest cities in Western Europe.", "Yes", "Holdout"],
+  ["Q280", "Medium", "What do fish use to breathe underwater?", "Gills", "Lungs", "Fins", "Scales", "A", "Gills pull oxygen out of the water as it flows past.", "Yes", "Holdout"],
+  ["Q281", "Medium", "How many players from one ice hockey team are on the ice at a time?", "6", "5", "7", "11", "A", "That count includes the goalie.", "Yes", "Holdout"],
+  ["Q282", "Medium", "In which city is the Golden Gate Bridge?", "Los Angeles", "Seattle", "San Diego", "San Francisco", "D", "The Golden Gate Bridge opened in 1937.", "Yes", "Holdout"],
+  ["Q283", "Medium", "Which artist is famous for paintings of soup cans?", "Roy Lichtenstein", "Andy Warhol", "Jackson Pollock", "Keith Haring", "B", "Warhol painted 32 different Campbell's soup flavors in one series.", "Yes", "Holdout"],
+  ["Q284", "Medium", "Which mountain range is often used as the border between Europe and Asia?", "Alps", "Carpathians", "Pyrenees", "Ural Mountains", "D", "The Urals run north to south through Russia.", "Yes", "Holdout"],
+  ["Q285", "Medium", "What is the capital of Norway?", "Bergen", "Oslo", "Stockholm", "Helsinki", "B", "Oslo hosts the Nobel Peace Prize ceremony every year.", "Yes", "Holdout"],
+  ["Q286", "Medium", "How many minutes are in a full day?", "1,200", "1,440", "1,600", "2,400", "B", "That's 24 hours times 60 minutes.", "Yes", "Holdout"],
+  ["Q287", "Medium", "Which vitamin does your skin make when it gets sunlight?", "Vitamin A", "Vitamin C", "Vitamin K", "Vitamin D", "D", "Vitamin D helps your body absorb calcium.", "Yes", "Holdout"],
+  ["Q288", "Medium", "Who wrote the poem The Raven?", "Walt Whitman", "Robert Frost", "Emily Dickinson", "Edgar Allan Poe", "D", "The Raven was published in 1845.", "Yes", "Holdout"],
+  ["Q289", "Medium", "What is the capital of Vietnam?", "Ho Chi Minh City", "Da Nang", "Hanoi", "Hue", "C", "Hanoi has been a capital city for about 1,000 years.", "Yes", "Holdout"],
+  ["Q290", "Medium", "Which is the largest coral reef system in the world?", "Belize Barrier Reef", "Red Sea Reef", "Great Barrier Reef", "Florida Reef", "C", "It stretches more than 1,400 miles along Australia's coast.", "Yes", "Holdout"],
+  ["Q291", "Medium", "Which country is called the Land of the Rising Sun?", "Japan", "China", "South Korea", "Thailand", "A", "Japan's name in Japanese, Nihon, means origin of the sun.", "Yes", "Holdout"],
+  ["Q292", "Medium", "What do you call animals that eat only plants?", "Carnivores", "Herbivores", "Omnivores", "Insectivores", "B", "Cows, deer, and rabbits are all herbivores.", "Yes", "Holdout"],
+  ["Q293", "Medium", "What is the capital of Poland?", "Krakow", "Gdansk", "Prague", "Warsaw", "D", "Krakow was Poland's capital until about 1600.", "Yes", "Holdout"],
+  ["Q294", "Medium", "In U.S. cooking, how many teaspoons make one tablespoon?", "2", "4", "3", "5", "C", "In U.S. cooking, 16 tablespoons make one cup.", "Yes", "Holdout"],
+  ["Q295", "Medium", "Who developed the first widely used polio vaccine?", "Jonas Salk", "Louis Pasteur", "Edward Jenner", "Robert Koch", "A", "Salk's vaccine was declared safe and effective in 1955.", "Yes", "Holdout"],
+  ["Q296", "Medium", "What is the capital of Cuba?", "Santiago de Cuba", "Kingston", "San Juan", "Havana", "D", "Havana was founded by the Spanish in the early 1500s.", "Yes", "Holdout"],
+  ["Q297", "Medium", "What is the colored part of the eye called?", "Iris", "Pupil", "Retina", "Cornea", "A", "The pupil is the black opening in the middle of the iris.", "Yes", "Holdout"],
+  ["Q298", "Medium", "What is melted rock called once it flows out of a volcano?", "Magma", "Lava", "Basalt", "Ash", "B", "While it's still underground, melted rock is called magma.", "Yes", "Holdout"],
+  ["Q299", "Medium", "What is the capital of Austria?", "Salzburg", "Graz", "Innsbruck", "Vienna", "D", "Vienna was home to Mozart, Beethoven, and Haydn at different times.", "Yes", "Holdout"],
+  ["Q300", "Medium", "What does a seismograph measure?", "Wind speed", "Earthquakes", "Rainfall", "Air pressure", "B", "It records the shaking of the ground as wavy lines.", "Yes", "Holdout"],
+  ["Q301", "Medium", "Who painted Girl with a Pearl Earring?", "Rembrandt", "Johannes Vermeer", "Jan van Eyck", "Peter Paul Rubens", "B", "Vermeer painted it in the Dutch city of Delft around 1665.", "Yes", "Holdout"],
+  ["Q302", "Medium", "What is the capital of Peru?", "Cusco", "Quito", "Bogota", "Lima", "D", "Lima was founded by Spanish conquistador Francisco Pizarro in 1535.", "Yes", "Holdout"],
+  ["Q303", "Medium", "What is the longest river in Asia?", "Yangtze", "Ganges", "Mekong", "Indus", "A", "The Yangtze flows entirely within China.", "Yes", "Holdout"],
+  ["Q304", "Medium", "What is the capital of Sweden?", "Stockholm", "Gothenburg", "Oslo", "Malmo", "A", "Stockholm is built on 14 islands.", "Yes", "Holdout"],
+  ["Q305", "Medium", "What is the longest side of a right triangle called?", "Radius", "Hypotenuse", "Diagonal", "Base", "B", "It's always the side across from the right angle.", "Yes", "Holdout"],
+  ["Q306", "Medium", "What is the tallest mountain in North America?", "Mount Whitney", "Mount Rainier", "Denali", "Pikes Peak", "C", "Denali is in Alaska and rises about 20,300 feet.", "Yes", "Holdout"],
+  ["Q307", "Medium", "Which planet is named after the Greek god of the sky?", "Neptune", "Saturn", "Mars", "Uranus", "D", "Uranus is the only planet named after a Greek god instead of a Roman one.", "Yes", "Holdout"],
+  ["Q308", "Medium", "How many years are in a decade?", "5", "12", "10", "100", "C", "Deca comes from the Greek word for ten.", "Yes", "Holdout"],
+  ["Q309", "Hard", "What is the smallest country in South America by area?", "Uruguay", "Suriname", "Guyana", "Ecuador", "B", "Suriname is the only country in South America where Dutch is the official language.", "Yes", "Holdout"],
+  ["Q310", "Hard", "Triton is a moon of which planet?", "Neptune", "Uranus", "Saturn", "Jupiter", "A", "Triton orbits in the opposite direction to Neptune's spin.", "Yes", "Holdout"],
+  ["Q311", "Hard", "What is the chemical symbol for lead?", "Ld", "Le", "Pl", "Pb", "D", "Pb comes from plumbum, the Latin word for lead.", "Yes", "Holdout"],
+  ["Q312", "Hard", "Who wrote One Hundred Years of Solitude?", "Isabel Allende", "Jorge Luis Borges", "Gabriel Garcia Marquez", "Pablo Neruda", "C", "Garcia Marquez won the Nobel Prize in Literature in 1982.", "Yes", "Holdout"],
+  ["Q313", "Hard", "In what year did the Soviet Union break apart?", "1989", "1990", "1991", "1993", "C", "It split into 15 independent countries.", "Yes", "Holdout"],
+  ["Q314", "Hard", "Which element has atomic number 79?", "Silver", "Platinum", "Mercury", "Gold", "D", "Gold can be hammered into sheets thin enough to see light through.", "Yes", "Holdout"],
+  ["Q315", "Hard", "Who composed the opera The Magic Flute?", "Verdi", "Wagner", "Mozart", "Puccini", "C", "It premiered in Vienna in 1791, just months before Mozart died.", "Yes", "Holdout"],
+  ["Q316", "Hard", "What is the capital of Nigeria?", "Lagos", "Kano", "Abuja", "Ibadan", "C", "Lagos was Nigeria's capital until 1991.", "Yes", "Holdout"],
+  ["Q317", "Hard", "How many chromosomes do humans usually have?", "23", "44", "46", "48", "C", "They come in 23 pairs.", "Yes", "Holdout"],
+  ["Q318", "Hard", "Who painted The Birth of Venus?", "Sandro Botticelli", "Titian", "Raphael", "Leonardo da Vinci", "A", "It hangs in the Uffizi Gallery in Florence.", "Yes", "Holdout"],
+  ["Q319", "Hard", "What is the largest artery in the human body?", "Aorta", "Carotid artery", "Femoral artery", "Pulmonary artery", "A", "The aorta carries blood straight from the heart.", "Yes", "Holdout"],
+  ["Q320", "Hard", "Which astronomer worked out the laws of planetary motion?", "Nicolaus Copernicus", "Galileo Galilei", "Tycho Brahe", "Johannes Kepler", "D", "Kepler showed that planets move in ovals, not perfect circles.", "Yes", "Holdout"],
+  ["Q321", "Hard", "What is the capital of the Canadian province of British Columbia?", "Vancouver", "Kelowna", "Victoria", "Surrey", "C", "Vancouver is the province's largest city, but Victoria is the capital.", "Yes", "Holdout"],
+  ["Q322", "Hard", "In what year did the Wright brothers make their first powered airplane flight?", "1899", "1908", "1903", "1911", "C", "The first flight lasted about 12 seconds.", "Yes", "Holdout"],
+  ["Q323", "Hard", "What is the longest river in Australia?", "Darling River", "Murray River", "Murrumbidgee River", "Lachlan River", "B", "The Murray flows about 1,560 miles to the sea.", "Yes", "Holdout"],
+  ["Q324", "Hard", "What is the main language of Iran?", "Arabic", "Persian", "Turkish", "Urdu", "B", "Persian is also called Farsi.", "Yes", "Holdout"],
+  ["Q325", "Hard", "Who wrote Don Quixote?", "Lope de Vega", "Dante Alighieri", "Federico Garcia Lorca", "Miguel de Cervantes", "D", "It's often called the first modern novel.", "Yes", "Holdout"],
+  ["Q326", "Hard", "What is the capital of Saudi Arabia?", "Jeddah", "Riyadh", "Mecca", "Medina", "B", "Riyadh is in the center of the Arabian Peninsula.", "Yes", "Holdout"],
+  ["Q327", "Hard", "What is the largest moon of Uranus?", "Oberon", "Titania", "Miranda", "Ariel", "B", "Most of Uranus's moons are named after characters from Shakespeare.", "Yes", "Holdout"],
+  ["Q328", "Hard", "Who painted The Night Watch?", "Johannes Vermeer", "Peter Paul Rubens", "Frans Hals", "Rembrandt", "D", "It hangs in the Rijksmuseum in Amsterdam.", "Yes", "Holdout"],
+  ["Q329", "Hard", "What is the deepest lake in the world?", "Lake Tanganyika", "Lake Baikal", "Lake Superior", "Caspian Sea", "B", "Baikal holds about a fifth of the world's unfrozen fresh surface water.", "Yes", "Holdout"],
+  ["Q330", "Hard", "Who composed Clair de Lune?", "Erik Satie", "Maurice Ravel", "Claude Debussy", "Frederic Chopin", "C", "Clair de lune means moonlight in French.", "Yes", "Holdout"],
+  ["Q331", "Hard", "What is the capital of Chile?", "Valparaiso", "Lima", "Buenos Aires", "Santiago", "D", "Santiago sits in a valley with the Andes mountains to its east.", "Yes", "Holdout"],
+  ["Q332", "Hard", "Which ancient civilization built Chichen Itza?", "The Aztecs", "The Maya", "The Inca", "The Olmecs", "B", "Chichen Itza is on Mexico's Yucatan Peninsula.", "Yes", "Holdout"],
+  ["Q333", "Hard", "What is the unit of electrical resistance?", "Ohm", "Volt", "Ampere", "Watt", "A", "It's named after German physicist Georg Ohm.", "Yes", "Holdout"],
+  ["Q334", "Hard", "Who was the first emperor of Rome?", "Augustus", "Julius Caesar", "Nero", "Caligula", "A", "Julius Caesar was a dictator, but never actually emperor.", "Yes", "Holdout"],
+  ["Q335", "Hard", "In which country is the ancient city of Petra?", "Egypt", "Syria", "Jordan", "Lebanon", "C", "Petra's buildings were carved directly into rose-colored rock.", "Yes", "Holdout"],
+  ["Q336", "Hard", "How many lines are on a standard music staff?", "4", "5", "6", "7", "B", "The spaces between the lines stand for notes too.", "Yes", "Holdout"],
+  ["Q337", "Hard", "What is the capital of Hungary?", "Prague", "Vienna", "Bucharest", "Budapest", "D", "Budapest was formed in 1873 by joining the cities of Buda, Obuda, and Pest.", "Yes", "Holdout"],
+  ["Q338", "Hard", "Which physicist is known for the uncertainty principle?", "Niels Bohr", "Werner Heisenberg", "Erwin Schrodinger", "Max Planck", "B", "He published the idea in 1927.", "Yes", "Holdout"],
+  ["Q339", "Hard", "Which part of a cell is often called its powerhouse?", "Mitochondria", "Nucleus", "Ribosome", "Golgi apparatus", "A", "Mitochondria turn food into energy the cell can use.", "Yes", "Holdout"],
+  ["Q340", "Hard", "Who wrote Moby-Dick?", "Nathaniel Hawthorne", "Jack London", "Herman Melville", "Mark Twain", "C", "Moby-Dick begins with the famous line, Call me Ishmael.", "Yes", "Holdout"],
+  ["Q341", "Hard", "In which country is the city of Timbuktu?", "Niger", "Chad", "Mali", "Senegal", "C", "Timbuktu was once a great center of learning and trade.", "Yes", "Holdout"],
+  ["Q342", "Hard", "What is the capital of Colombia?", "Bogota", "Medellin", "Cali", "Cartagena", "A", "Bogota sits about 8,660 feet above sea level.", "Yes", "Holdout"],
+  ["Q343", "Hard", "Which woodwind instrument uses a double reed?", "Clarinet", "Flute", "Oboe", "Saxophone", "C", "Orchestras usually tune to a note played by the oboe.", "Yes", "Holdout"],
+  ["Q344", "Hard", "In what year did the first iPhone go on sale?", "2005", "2007", "2008", "2010", "B", "It first went on sale in the United States on June 29, 2007.", "Yes", "Holdout"],
+  ["Q345", "Hard", "What is the second-highest mountain in the world?", "Kangchenjunga", "Lhotse", "K2", "Makalu", "C", "K2 sits on the border between Pakistan and China.", "Yes", "Holdout"],
+  ["Q346", "Hard", "What is the capital of Finland?", "Tampere", "Turku", "Tallinn", "Helsinki", "D", "Tallinn, the capital of Estonia, is just across the sea from Helsinki.", "Yes", "Holdout"],
+  ["Q347", "Hard", "Who discovered the planet Uranus?", "William Herschel", "Galileo Galilei", "Johannes Kepler", "Clyde Tombaugh", "A", "Herschel spotted it in 1781.", "Yes", "Holdout"],
+  ["Q348", "Hard", "What is the largest country in Africa by area?", "Algeria", "Sudan", "DR Congo", "Libya", "A", "Sudan held the title until South Sudan became independent in 2011.", "Yes", "Holdout"],
+  ["Q349", "Hard", "About how many kelvins is the boiling point of water at sea level?", "100", "212", "273", "373", "D", "Water freezes at about 273 kelvins.", "Yes", "Holdout"],
+  ["Q350", "Hard", "Who wrote War and Peace?", "Fyodor Dostoevsky", "Anton Chekhov", "Leo Tolstoy", "Alexander Pushkin", "C", "War and Peace is set during Napoleon's invasion of Russia.", "Yes", "Holdout"],
+  ["Q351", "Hard", "Which flightless bird is a famous symbol of New Zealand?", "Emu", "Cassowary", "Rhea", "Kiwi", "D", "New Zealanders are often called Kiwis.", "Yes", "Holdout"],
+  ["Q352", "Hard", "How many players are on a cricket team?", "9", "10", "11", "12", "C", "A cricket match can last up to five days.", "Yes", "Holdout"],
+  ["Q353", "Hard", "What is the capital of Iceland?", "Akureyri", "Reykjavik", "Oslo", "Nuuk", "B", "Reykjavik is the world's northernmost capital of a sovereign country.", "Yes", "Holdout"],
+  ["Q354", "Hard", "Which element has the chemical symbol Hg?", "Mercury", "Silver", "Helium", "Magnesium", "A", "Hg comes from hydrargyrum, meaning water-silver.", "Yes", "Holdout"],
+  ["Q355", "Hard", "Which philosopher wrote The Republic?", "Aristotle", "Socrates", "Plato", "Homer", "C", "Socrates is the main speaker in it, though he wrote nothing himself.", "Yes", "Holdout"],
+  ["Q356", "Hard", "In which country is Angkor Wat?", "Cambodia", "Thailand", "Vietnam", "Laos", "A", "Angkor Wat appears on Cambodia's national flag.", "Yes", "Holdout"],
+  ["Q357", "Hard", "What do you call a word that reads the same backward and forward?", "Palindrome", "Anagram", "Homonym", "Acronym", "A", "Racecar and level are both palindromes.", "Yes", "Holdout"],
+  ["Q358", "Hard", "Which president appears on the U.S. 50-dollar bill?", "Benjamin Franklin", "Ulysses S. Grant", "Andrew Jackson", "Alexander Hamilton", "B", "Grant led Union forces before becoming president.", "Yes", "Holdout"],
+  ["Q359", "Hard", "What is the capital of Ukraine?", "Lviv", "Odesa", "Kyiv", "Kharkiv", "C", "Kyiv sits on the Dnipro River.", "Yes", "Holdout"],
+  ["Q360", "Hard", "Who sculpted The Thinker?", "Michelangelo", "Auguste Rodin", "Donatello", "Gian Lorenzo Bernini", "B", "The Thinker was first designed as part of a huge set of doors.", "Yes", "Holdout"],
+  ["Q361", "Hard", "What force slows down two surfaces rubbing against each other?", "Gravity", "Inertia", "Momentum", "Friction", "D", "Friction is why rubbing your hands together warms them.", "Yes", "Holdout"],
+  ["Q362", "Hard", "What is the official language of Austria?", "Dutch", "Hungarian", "Czech", "German", "D", "Austrian German has some of its own words, like Jause for snack.", "Yes", "Holdout"],
+  ["Q363", "Hard", "Who wrote The Odyssey?", "Virgil", "Sophocles", "Ovid", "Homer", "D", "The Odyssey follows Odysseus on his long trip home after the Trojan War.", "Yes", "Holdout"],
+  ["Q364", "Hard", "What was the giant supercontinent that broke apart about 200 million years ago?", "Atlantis", "Pangaea", "Lemuria", "Avalonia", "B", "Pangaea means all lands in Greek.", "Yes", "Holdout"],
+  ["Q365", "Hard", "In what year did the Chernobyl nuclear disaster happen?", "1979", "1984", "1991", "1986", "D", "Chernobyl is in northern Ukraine.", "Yes", "Holdout"],
+  ["Q366", "Hard", "What is the chemical symbol for tin?", "Ti", "Tn", "Si", "Sn", "D", "Sn comes from stannum, the Latin word for tin.", "Yes", "Holdout"],
+  ["Q367", "Hard", "Who composed The Rite of Spring?", "Igor Stravinsky", "Claude Debussy", "Maurice Ravel", "Sergei Prokofiev", "A", "Its 1913 premiere in Paris caused an uproar in the audience.", "Yes", "Holdout"],
+  ["Q368", "Hard", "What is the capital of Denmark?", "Aarhus", "Oslo", "Odense", "Copenhagen", "D", "The Little Mermaid statue sits in Copenhagen's harbor.", "Yes", "Holdout"],
+  ["Q369", "Hard", "What is the largest species of penguin?", "King penguin", "Adelie penguin", "Emperor penguin", "Gentoo penguin", "C", "Emperor penguins can stand about 4 feet tall.", "Yes", "Holdout"],
+  ["Q370", "Hard", "Who painted The Scream?", "Gustav Klimt", "Wassily Kandinsky", "Egon Schiele", "Edvard Munch", "D", "Munch made several versions of The Scream.", "Yes", "Holdout"],
+  ["Q371", "Hard", "What is the capital of Belgium?", "Antwerp", "Brussels", "Bruges", "Ghent", "B", "Brussels is also home to the main offices of the European Union.", "Yes", "Holdout"],
+  ["Q372", "Hard", "In which country did the Renaissance begin?", "France", "Greece", "Italy", "Spain", "C", "It began in Florence in the 1300s and 1400s.", "Yes", "Holdout"],
+  ["Q373", "Hard", "What is the longest river in the United Kingdom?", "River Thames", "River Trent", "River Severn", "River Tay", "C", "The Severn flows through both Wales and England.", "Yes", "Holdout"],
+  ["Q374", "Hard", "What is the main gas in natural gas?", "Propane", "Methane", "Butane", "Ethane", "B", "Natural gas has no smell, so companies add one to help people notice leaks.", "Yes", "Holdout"],
+  ["Q375", "Hard", "Who was the first woman to fly solo across the Atlantic Ocean?", "Bessie Coleman", "Harriet Quimby", "Jacqueline Cochran", "Amelia Earhart", "D", "She made the flight in 1932.", "Yes", "Holdout"],
+  ["Q376", "Hard", "Which country has been the world's top coffee producer for more than 150 years?", "Colombia", "Brazil", "Vietnam", "Ethiopia", "B", "Coffee is believed to have first been used in Ethiopia.", "Yes", "Holdout"],
+  ["Q377", "Hard", "What is the capital of the Philippines?", "Cebu City", "Manila", "Davao City", "Makati", "B", "The Philippines is made up of more than 7,000 islands.", "Yes", "Holdout"],
+  ["Q378", "Hard", "What word describes animals that are active at night?", "Diurnal", "Migratory", "Dormant", "Nocturnal", "D", "Animals that are active during the day are called diurnal.", "Yes", "Holdout"],
+  ["Q379", "Hard", "Who wrote The Divine Comedy?", "Petrarch", "Dante Alighieri", "Giovanni Boccaccio", "Virgil", "B", "In the poem, the Roman poet Virgil guides Dante through the afterlife.", "Yes", "Holdout"],
+  ["Q380", "Hard", "What is the largest of the Great Lakes?", "Lake Michigan", "Lake Huron", "Lake Erie", "Lake Superior", "D", "Lake Superior holds more water than the other four Great Lakes combined.", "Yes", "Holdout"],
+  ["Q381", "Hard", "What particle in an atom has a positive charge?", "Proton", "Electron", "Neutron", "Photon", "A", "Electrons have a negative charge, and neutrons have none.", "Yes", "Holdout"],
+  ["Q382", "Hard", "How many degrees are in a full circle?", "360", "180", "270", "400", "A", "The 360 may come from the ancient Babylonians, who counted in sixties.", "Yes", "Holdout"],
+  ["Q383", "Hard", "Which planet's moon Io is covered in active volcanoes?", "Jupiter", "Saturn", "Mars", "Neptune", "A", "Io is the most volcanically active place in the solar system.", "Yes", "Holdout"],
+  ["Q384", "Very Hard", "What is the capital of Mongolia?", "Ulaanbaatar", "Almaty", "Bishkek", "Hohhot", "A", "Ulaanbaatar is often called the coldest capital city in the world.", "Yes", "Holdout"],
+  ["Q385", "Very Hard", "Who composed the Brandenburg Concertos?", "Johann Sebastian Bach", "George Frideric Handel", "Georg Philipp Telemann", "Antonio Vivaldi", "A", "Bach dedicated them to a German nobleman in 1721.", "Yes", "Holdout"],
+  ["Q386", "Very Hard", "What is the capital of Bhutan?", "Kathmandu", "Thimphu", "Paro", "Lhasa", "B", "Thimphu is known for having no traffic lights.", "Yes", "Holdout"],
+  ["Q387", "Very Hard", "In what year was the Magna Carta sealed?", "1066", "1215", "1314", "1415", "B", "King John of England sealed it at Runnymede.", "Yes", "Holdout"],
+  ["Q388", "Very Hard", "Who painted Guernica?", "Pablo Picasso", "Joan Miro", "Salvador Dali", "Francisco Goya", "A", "Picasso painted it in 1937 in response to the bombing of a Spanish town.", "Yes", "Holdout"],
+  ["Q389", "Very Hard", "What is the capital of Burkina Faso?", "Ouagadougou", "Bamako", "Niamey", "Accra", "A", "Burkina Faso means land of upright people.", "Yes", "Holdout"],
+  ["Q390", "Very Hard", "Which Renaissance astronomer argued that Earth goes around the Sun?", "Johannes Kepler", "Nicolaus Copernicus", "Galileo Galilei", "Ptolemy", "B", "His book on the idea was published in 1543, the year he died.", "Yes", "Holdout"],
+  ["Q391", "Very Hard", "How many electrons does a carbon atom have in its outer shell?", "2", "6", "4", "8", "C", "That's why carbon can bond with four other atoms at once.", "Yes", "Holdout"],
+  ["Q392", "Very Hard", "Who wrote the novel Things Fall Apart?", "Wole Soyinka", "Ngugi wa Thiong'o", "Chinua Achebe", "Chimamanda Ngozi Adichie", "C", "Things Fall Apart was published in 1958.", "Yes", "Holdout"],
+  ["Q393", "Very Hard", "What is the boundary between Earth's crust and mantle called?", "Mohorovicic discontinuity", "Gutenberg discontinuity", "Lehmann discontinuity", "Conrad discontinuity", "A", "Geologists usually just call it the Moho.", "Yes", "Holdout"],
+  ["Q394", "Very Hard", "Who composed the opera Carmen?", "Giuseppe Verdi", "Georges Bizet", "Giacomo Puccini", "Gioachino Rossini", "B", "Bizet died just three months after Carmen's first performance.", "Yes", "Holdout"],
+  ["Q395", "Very Hard", "What is the capital of Laos?", "Luang Prabang", "Vientiane", "Phnom Penh", "Yangon", "B", "Vientiane sits on the Mekong River, across from Thailand.", "Yes", "Holdout"],
+  ["Q396", "Very Hard", "In what year did Constantinople fall to the Ottoman Empire?", "1204", "1389", "1492", "1453", "D", "The city is known today as Istanbul.", "Yes", "Holdout"],
+  ["Q397", "Very Hard", "Of the eight planets, which has the most oval-shaped orbit?", "Mercury", "Mars", "Earth", "Neptune", "A", "Mercury's distance from the Sun changes by millions of miles during its orbit.", "Yes", "Holdout"],
+  ["Q398", "Very Hard", "Who created the first widely recognized periodic table in 1869?", "Antoine Lavoisier", "John Dalton", "Dmitri Mendeleev", "Niels Bohr", "C", "Mendeleev left gaps for elements that hadn't been discovered yet.", "Yes", "Holdout"],
+  ["Q399", "Very Hard", "What is the capital of Slovenia?", "Zagreb", "Ljubljana", "Bratislava", "Maribor", "B", "Ljubljana's symbol is a dragon.", "Yes", "Holdout"],
+  ["Q400", "Very Hard", "In Greek mythology, who flew too close to the Sun on wings of wax?", "Daedalus", "Icarus", "Perseus", "Theseus", "B", "His father, Daedalus, built the wings.", "Yes", "Holdout"],
+  ["Q401", "Very Hard", "What is Earth's inner core mostly made of?", "Silicon", "Iron", "Lead", "Uranium", "B", "The inner core is solid, even though it's hotter than the surface of the Sun.", "Yes", "Holdout"],
+  ["Q402", "Very Hard", "Who composed Rhapsody in Blue?", "Aaron Copland", "Leonard Bernstein", "George Gershwin", "Cole Porter", "C", "Rhapsody in Blue premiered in New York in 1924.", "Yes", "Holdout"],
+  ["Q403", "Very Hard", "What is the capital of Paraguay?", "Montevideo", "Asuncion", "La Paz", "Sucre", "B", "Asuncion is one of the oldest cities in South America.", "Yes", "Holdout"],
+  ["Q404", "Very Hard", "In what year was the Battle of Hastings?", "1016", "1086", "1066", "1215", "C", "The battle made William the Conqueror king of England.", "Yes", "Holdout"],
+  ["Q405", "Very Hard", "What is the study of fungi called?", "Mycology", "Phycology", "Bryology", "Virology", "A", "Mykes is the Greek word for mushroom.", "Yes", "Holdout"],
+  ["Q406", "Very Hard", "Who wrote The Brothers Karamazov?", "Leo Tolstoy", "Ivan Turgenev", "Nikolai Gogol", "Fyodor Dostoevsky", "D", "It was Dostoevsky's last novel, finished in 1880.", "Yes", "Holdout"],
+  ["Q407", "Very Hard", "What is the capital of Azerbaijan?", "Tbilisi", "Baku", "Yerevan", "Ashgabat", "B", "Baku is on the shore of the Caspian Sea.", "Yes", "Holdout"],
+  ["Q408", "Very Hard", "What is the largest moon of Pluto?", "Nix", "Hydra", "Styx", "Charon", "D", "Charon is about half the width of Pluto.", "Yes", "Holdout"],
+  ["Q409", "Very Hard", "Who painted The Garden of Earthly Delights?", "Hieronymus Bosch", "Pieter Bruegel the Elder", "Albrecht Durer", "Jan van Eyck", "A", "It hangs in the Prado Museum in Madrid.", "Yes", "Holdout"],
+  ["Q410", "Very Hard", "What is the next prime number after 31?", "33", "35", "37", "39", "C", "33, 35, and 39 can all be divided by smaller numbers.", "Yes", "Holdout"],
+  ["Q411", "Very Hard", "In which country are the ruins of Persepolis?", "Iran", "Iraq", "Turkey", "Syria", "A", "Persepolis was a capital of the ancient Persian Empire.", "Yes", "Holdout"],
+  ["Q412", "Very Hard", "Who composed the famous 1816 opera The Barber of Seville?", "Giuseppe Verdi", "Gioachino Rossini", "Gaetano Donizetti", "Vincenzo Bellini", "B", "Rossini is said to have written it in just a few weeks.", "Yes", "Holdout"],
+  ["Q413", "Very Hard", "What is the chemical symbol for antimony?", "An", "Sb", "Am", "At", "B", "Sb comes from stibium, its Latin name.", "Yes", "Holdout"],
+  ["Q414", "Very Hard", "Who was the first person to reach the South Pole?", "Robert Falcon Scott", "Ernest Shackleton", "Richard Byrd", "Roald Amundsen", "D", "Amundsen arrived in December 1911, about five weeks before Scott.", "Yes", "Holdout"],
+  ["Q415", "Very Hard", "What is the capital of Latvia?", "Vilnius", "Tallinn", "Minsk", "Riga", "D", "Riga's old town is known for its colorful old buildings.", "Yes", "Holdout"],
+  ["Q416", "Very Hard", "Who discovered the electron?", "J. J. Thomson", "Ernest Rutherford", "Niels Bohr", "James Chadwick", "A", "Thomson discovered it in 1897.", "Yes", "Holdout"],
+  ["Q417", "Very Hard", "Who wrote Les Miserables?", "Victor Hugo", "Alexandre Dumas", "Emile Zola", "Gustave Flaubert", "A", "Victor Hugo also wrote The Hunchback of Notre-Dame.", "Yes", "Holdout"],
+  ["Q418", "Very Hard", "In what year were the first modern Olympic Games held?", "1888", "1900", "1896", "1912", "C", "They were held in Athens, Greece.", "Yes", "Holdout"],
+  ["Q419", "Very Hard", "Which hormone, made by the pineal gland, helps control sleep?", "Serotonin", "Cortisol", "Melatonin", "Adrenaline", "C", "Darkness signals the body to make more melatonin.", "Yes", "Holdout"],
+  ["Q420", "Very Hard", "What is the capital of Eritrea?", "Djibouti", "Mogadishu", "Asmara", "Khartoum", "C", "Asmara is known for its Italian-era modernist buildings.", "Yes", "Holdout"],
+  ["Q421", "Very Hard", "Who composed The Planets orchestral suite?", "Edward Elgar", "Gustav Holst", "Ralph Vaughan Williams", "Benjamin Britten", "B", "Its seven movements are named for planets, including Mars, the Bringer of War.", "Yes", "Holdout"],
+  ["Q422", "Very Hard", "Which element has atomic number 26?", "Copper", "Nickel", "Iron", "Cobalt", "C", "Iron is the most common element in Earth by mass.", "Yes", "Holdout"],
+  ["Q423", "Very Hard", "Who painted Liberty Leading the People?", "Eugene Delacroix", "Jacques-Louis David", "Theodore Gericault", "Edouard Manet", "A", "It celebrates the French revolution of July 1830.", "Yes", "Holdout"],
+  ["Q424", "Very Hard", "Which sea lies between Italy and Croatia?", "Aegean Sea", "Adriatic Sea", "Tyrrhenian Sea", "Black Sea", "B", "Venice sits at the northern end of the Adriatic.", "Yes", "Holdout"],
+  ["Q425", "Very Hard", "Enceladus, a moon that sprays water geysers, orbits which planet?", "Jupiter", "Uranus", "Neptune", "Saturn", "D", "Its geysers feed one of Saturn's outer rings.", "Yes", "Holdout"],
+  ["Q426", "Very Hard", "Who wrote Brave New World?", "George Orwell", "H. G. Wells", "Ray Bradbury", "Aldous Huxley", "D", "Brave New World was published in 1932.", "Yes", "Holdout"],
+  ["Q427", "Very Hard", "What is the capital of Myanmar?", "Yangon", "Naypyidaw", "Mandalay", "Bangkok", "B", "Yangon was the capital until the government moved to Naypyidaw in 2005 and 2006.", "Yes", "Holdout"],
+  ["Q428", "Very Hard", "In what year did the Spanish Armada sail against England?", "1492", "1603", "1588", "1666", "C", "Storms wrecked many of the Armada's ships on the way home.", "Yes", "Holdout"],
+  ["Q429", "Very Hard", "What is the SI unit of force?", "Joule", "Pascal", "Watt", "Newton", "D", "It's named after Isaac Newton.", "Yes", "Holdout"],
+  ["Q430", "Very Hard", "Who composed The Blue Danube waltz?", "Johann Strauss II", "Franz Schubert", "Johannes Brahms", "Franz Liszt", "A", "Strauss was known as the Waltz King.", "Yes", "Holdout"],
+  ["Q431", "Very Hard", "Which Roman emperor ordered a wall built across northern Britain in AD 122?", "Trajan", "Claudius", "Hadrian", "Nero", "C", "Parts of Hadrian's Wall still stand today.", "Yes", "Holdout"],
+  ["Q432", "Very Hard", "What is the capital of Ecuador?", "Quito", "Guayaquil", "Cuenca", "Lima", "A", "Quito sits about 9,350 feet above sea level, close to the equator.", "Yes", "Holdout"],
+  ["Q433", "Very Hard", "Who discovered the neutron?", "Ernest Rutherford", "J. J. Thomson", "Enrico Fermi", "James Chadwick", "D", "Chadwick discovered it in 1932.", "Yes", "Holdout"],
+  ["Q434", "Very Hard", "The Rosetta Stone helped scholars decode which writing system?", "Linear B", "Cuneiform", "Mayan glyphs", "Egyptian hieroglyphs", "D", "The same text appears on it in three scripts.", "Yes", "Holdout"],
+  ["Q435", "Very Hard", "What is the capital of the country of Georgia?", "Baku", "Tbilisi", "Yerevan", "Batumi", "B", "Tbilisi is famous for its sulfur bathhouses.", "Yes", "Holdout"],
+  ["Q436", "Very Hard", "What is the longest bone in the human arm?", "Humerus", "Radius", "Ulna", "Scapula", "A", "The funny bone is actually a nerve that runs near the humerus.", "Yes", "Holdout"],
+  ["Q437", "Very Hard", "Which author created the detective Hercule Poirot?", "Dorothy L. Sayers", "Arthur Conan Doyle", "Agatha Christie", "P. D. James", "C", "Agatha Christie wrote more than 30 novels about Poirot.", "Yes", "Holdout"],
+  ["Q438", "Very Hard", "In what year did a person first travel into space?", "1957", "1963", "1961", "1969", "C", "Yuri Gagarin orbited Earth on April 12, 1961.", "Yes", "Holdout"],
+  ["Q439", "Very Hard", "What is the capital of Croatia?", "Zagreb", "Split", "Belgrade", "Sarajevo", "A", "The necktie traces its roots to scarves worn by Croatian soldiers.", "Yes", "Holdout"],
+  ["Q440", "Very Hard", "Who wrote the music that includes In the Hall of the Mountain King?", "Edvard Grieg", "Jean Sibelius", "Carl Nielsen", "Antonin Dvorak", "A", "It was written for the play Peer Gynt.", "Yes", "Holdout"],
+  ["Q441", "Very Hard", "Which protein carries oxygen in red blood cells?", "Insulin", "Keratin", "Collagen", "Hemoglobin", "D", "Hemoglobin is what makes blood red.", "Yes", "Holdout"],
+  ["Q442", "Very Hard", "Which country used to be called Siam?", "Cambodia", "Myanmar", "Laos", "Thailand", "D", "Siam officially became Thailand in 1939.", "Yes", "Holdout"],
+  ["Q443", "Very Hard", "Which country used to be called Ceylon?", "Bangladesh", "Myanmar", "Maldives", "Sri Lanka", "D", "Ceylon tea is still sold under the old name.", "Yes", "Holdout"],
+  ["Q444", "Very Hard", "Which country was known to the West as Persia until 1935?", "Iraq", "Turkey", "Afghanistan", "Iran", "D", "Iranians had long called their country Iran.", "Yes", "Holdout"],
+  ["Q445", "Very Hard", "What is the capital of Albania?", "Skopje", "Podgorica", "Tirana", "Pristina", "C", "Tirana became Albania's capital in 1920.", "Yes", "Holdout"],
+  ["Q446", "Very Hard", "Which ancient Greek mathematician wrote the geometry book Elements?", "Archimedes", "Pythagoras", "Thales", "Euclid", "D", "Elements was used as a textbook for more than 2,000 years.", "Yes", "Holdout"],
+  ["Q447", "Very Hard", "In what year did the Wall Street stock market crash that began the Great Depression?", "1919", "1929", "1933", "1939", "B", "The worst days were in late October 1929.", "Yes", "Holdout"],
+  ["Q448", "Very Hard", "Which instrument family does the bassoon belong to?", "Brass", "Strings", "Percussion", "Woodwinds", "D", "Unrolled, a bassoon's tube would be about 8 feet long.", "Yes", "Holdout"],
+  ["Q449", "Very Hard", "Who wrote The Prince, a famous book about political power?", "Thomas Hobbes", "Thomas More", "Niccolo Machiavelli", "Erasmus", "C", "The word Machiavellian comes from his name.", "Yes", "Holdout"],
+  ["Q450", "Very Hard", "What is the capital of Namibia?", "Windhoek", "Gaborone", "Lusaka", "Harare", "A", "Namibia is home to some of the tallest sand dunes in the world.", "Yes", "Holdout"],
+  ["Q451", "Very Hard", "Which element has the chemical symbol Ar?", "Arsenic", "Argon", "Silver", "Gold", "B", "Argon makes up about 1 percent of the air we breathe.", "Yes", "Holdout"],
+  ["Q452", "Very Hard", "Who painted the Water Lilies series?", "Claude Monet", "Pierre-Auguste Renoir", "Edgar Degas", "Paul Cezanne", "A", "Monet painted the lily pond at his home in Giverny for decades.", "Yes", "Holdout"],
+  ["Q453", "Very Hard", "What is the capital of Uruguay?", "Asuncion", "Montevideo", "Buenos Aires", "Punta del Este", "B", "Montevideo sits on the Rio de la Plata, across from Buenos Aires.", "Yes", "Holdout"],
+  ["Q454", "Very Hard", "Whose experiments with pea plants founded the science of genetics?", "Gregor Mendel", "Charles Darwin", "Louis Pasteur", "James Watson", "A", "Mendel was a monk in what is now the Czech Republic.", "Yes", "Holdout"],
+  ["Q455", "Very Hard", "What is the longest river entirely within France?", "Seine", "Rhone", "Garonne", "Loire", "D", "The Loire Valley is famous for its castles.", "Yes", "Holdout"],
+  ["Q456", "Very Hard", "In what year was Napoleon defeated at the Battle of Waterloo?", "1805", "1815", "1812", "1821", "B", "Waterloo is in present-day Belgium.", "Yes", "Holdout"],
+  ["Q457", "Very Hard", "What is the capital of Kyrgyzstan?", "Almaty", "Tashkent", "Dushanbe", "Bishkek", "D", "Bishkek sits at the foot of the Tian Shan mountains.", "Yes", "Holdout"],
+  ["Q458", "Very Hard", "Who wrote the epic poem Paradise Lost?", "John Milton", "William Blake", "Geoffrey Chaucer", "Edmund Spenser", "A", "Milton was blind when he wrote it and dictated the lines.", "Yes", "Holdout"],
+  ["Q459", "Very Hard", "Which composer wrote the Messiah oratorio, including the Hallelujah chorus?", "Johann Sebastian Bach", "George Frideric Handel", "Joseph Haydn", "Henry Purcell", "B", "Handel wrote Messiah in about three weeks in 1741.", "Yes", "Holdout"],
+  ["Q460", "Very Hard", "What is the smallest bone in the human ear called in plain English?", "Hammer", "Anvil", "Stirrup", "Drum", "C", "Its scientific name is the stapes.", "Yes", "Holdout"],
+  ["Q461", "Very Hard", "What is the capital of Mozambique?", "Lusaka", "Harare", "Lilongwe", "Maputo", "D", "Maputo sits on a bay of the Indian Ocean.", "Yes", "Holdout"]
 ];
 
 // Version 8 fairness fixes: [question ID]: the old wording. If your sheet still has the old
@@ -321,15 +630,18 @@ function doGet(e) {
 const API_ACTIONS = {
   getState: getState,
   getLeaderboard: getLeaderboard,
-  join: join,
   login: login,
-  submitAnswer: submitAnswer,
   useBonus: useBonus,
-  newRun: newRun,
   getGuestQuestion: getGuestQuestion,
-  guestAnswer: guestAnswer,
   logShare: logShare,
-  reportQuestion: reportQuestion
+  reportQuestion: reportQuestion,
+  createGuest: createGuest,
+  saveAccount: saveAccount,
+  startGuestEndless: startGuestEndless,
+  startEndless: startEndless,
+  answerEndless: answerEndless,
+  getDaily: getDaily,
+  answerDaily: answerDaily
 };
 
 function doPost(e) {
@@ -368,8 +680,8 @@ function setup() {
     settings.getRange(1, 1, 1, 3).setValues([['Setting', 'Value', 'What it does']]);
     settings.getRange(2, 1, 4, 3).setValues([
       ['Game Name', 'Holdout', 'Shown at the top of the game page.'],
-      ['Tagline', 'One question a day. One wrong answer and you are out.', 'Shown under the game name.'],
-      ['Run Length (days)', '30', 'How many questions in a row a player must get right to make the Hall of Fame.'],
+      ['Tagline', 'How many trivia questions can you get right in a row?', 'Shown under the game name.'],
+      ['Run Length (days)', '30', 'Endless runs that reach this many in a row go into the Hall of Fame.'],
       ['Time Zone', tz, 'Everyone\'s next question unlocks at midnight in this time zone. Also used for dates.']
     ]);
     styleHeader_(settings, 3);
@@ -379,14 +691,24 @@ function setup() {
   }
   addSettingIfMissing_(settings, 'Bonus Questions Per Day', '2',
     'Most bonus questions a player can use in one day. Players earn a bonus each time a friend joins with their invite link.');
-  addSettingIfMissing_(settings, 'Pause Days Per Run', '2',
-    'Days a player can miss in one run. Each missed day uses one. Missing one more than this ends the run.');
   addSettingIfMissing_(settings, 'Email Cheat Alerts', 'Yes',
     'Yes = email you each new cheat alert. No = only list them on the Cheat Alerts tab.');
   addSettingIfMissing_(settings, 'Cheat Alert Email', Session.getEffectiveUser().getEmail(),
     'Where cheat alerts are emailed.');
-  addSettingIfMissing_(settings, 'Game Website', 'https://pickledbee.github.io/holdout/',
+  addSettingIfMissing_(settings, 'Game Website', 'https://holdouttrivia.com/',
     'The address players use. Invite links and the Admin Panel use it.');
+  // Version 9: the old one-a-day tagline no longer fits the game.
+  settings.getDataRange().getValues().forEach((r, k) => {
+    if (String(r[0]).trim() === 'Tagline' && /^One question a day\. One wrong answer and you are out\.?$/.test(String(r[1]).trim())) {
+      settings.getRange(k + 1, 2).setValue('How many trivia questions can you get right in a row?');
+    }
+  });
+  // The site moved to holdouttrivia.com: update the old GitHub address so invite links use the real name.
+  settings.getDataRange().getValues().forEach((r, k) => {
+    if (String(r[0]).trim() === 'Game Website' && /^https:\/\/pickledbee\.github\.io\/holdout\/?$/i.test(String(r[1]).trim())) {
+      settings.getRange(k + 1, 2).setValue('https://holdouttrivia.com/');
+    }
+  });
   addSettingIfMissing_(settings, 'Amazon Associate Tag', 'bumblepickleb-20',
     'Your Amazon affiliate tag. It is added to every Amazon link on the Ads tab automatically.');
   addSettingIfMissing_(settings, 'Show Amazon Picks', 'Yes',
@@ -396,8 +718,11 @@ function setup() {
   // ---- Upgrade data from earlier versions (safe to run again) ----
   const upgradeNotes = upgradeToV7_(ss);
   upgradeNotes.forEach(n => Logger.log(n));
+  upgradeToV9_(ss).forEach(n => Logger.log(n));
   const fixed = applyQuestionFixes_(ss);
   if (fixed) Logger.log(fixed + ' question(s) updated with fairness fixes.');
+  const added = addNewStarterQuestions_(ss);
+  if (added) Logger.log(added + ' new question(s) added to the Questions tab.');
 
   // ---- Questions (filled in if empty) ----
   const questions = getOrCreate_(ss, TAB.QUESTIONS);
@@ -413,6 +738,7 @@ function setup() {
   questions.setColumnWidth(8, 70);
   questions.setColumnWidth(9, 480);
   questions.setColumnWidth(10, 70);
+  questions.setColumnWidth(11, 110);
   const qRows = Math.max(questions.getMaxRows() - 1, 500);
   if (questions.getMaxRows() < qRows + 1) questions.insertRowsAfter(questions.getMaxRows(), qRows + 1 - questions.getMaxRows());
   questions.getRange(2, 1, qRows, QUESTION_HEADERS.length).setWrap(true).setVerticalAlignment('top');
@@ -430,6 +756,8 @@ function setup() {
   players.hideColumns(P.HASH + 1, 2); // hide PIN Hash and Login Token
   players.getRange(2, P.LASTDATE + 1, Math.max(1, players.getMaxRows() - 1), 1).setNumberFormat('@');
   players.getRange(2, P.RESTARTDATE + 1, Math.max(1, players.getMaxRows() - 1), 1).setNumberFormat('@');
+  [P.TODAYDATE, P.DAILYDATE, P.DAILYLASTDATE, P.BONUSDATE].forEach(c =>
+    players.getRange(2, c + 1, Math.max(1, players.getMaxRows() - 1), 1).setNumberFormat('@'));
   ensureTab_(ss, TAB.ANSWERS, ANSWER_HEADERS);
   ensureTab_(ss, TAB.HALL, HALL_HEADERS).setColumnWidth(2, 220);
   const ads = ensureTab_(ss, TAB.ADS, ADS_HEADERS);
@@ -462,22 +790,20 @@ function setup() {
   const notes = [
     ['HOLDOUT: HOW THIS SHEET WORKS'],
     [''],
-    ['THE GAME'],
-    ['   Visitors can answer one Easy question before signing up. If they get it right and join, it counts as their question 1.'],
-    ['   A player\'s first question is available the moment they join. After that, everyone gets one question per day,'],
-    ['      and the next one unlocks at midnight (Time Zone in Settings).'],
-    ['   Each player gets a random question from the right difficulty level for their question number,'],
-    ['      skipping questions they have already seen. With a 30-question run: 1-7 Easy, 8-14 Medium, 15-21 Hard, 22-30 Very Hard.'],
-    ['   A wrong answer ends the run. The correct answer is revealed after the next midnight.'],
-    ['   Missing a day uses a pause day (Pause Days Per Run in Settings). Missing more days than that ends the run.'],
-    ['   Get every question in a run right (Run Length in Settings) and they go into the Hall of Fame.'],
-    ['   Anyone who is out can start a new run for free. The first restart each day gets a question right away.'],
+    ['THE GAME (version 9)'],
+    ['   ENDLESS: the main game. Play as much as you want. One life: a wrong answer ends the run, then just start another.'],
+    ['      Questions get harder as a run goes: 1-5 Easy, 6-12 Medium, 13-20 Hard, 21 and up Very Hard.'],
+    ['      The correct answer and fun fact show right after every answer. Score = how many in a row.'],
+    ['      Reaching Run Length (Settings) in a row puts a player in the Hall of Fame.'],
+    ['   DAILY HOLDOUT: the same 10 questions for everyone each day (3 Easy, 3 Medium, 2 Hard, 2 Very Hard).'],
+    ['      One try per day, it stops at the first miss, and answers are revealed the next day. Daily streaks count days in a row.'],
+    ['   NO SIGN-UP: the first answer creates a player with a fun automatic name saved on that device.'],
+    ['      "Save my spot" lets them pick a name and PIN so they can log in on any device. Saved Account shows Yes or No.'],
     [''],
-    ['BONUS QUESTIONS (COMEBACKS)'],
-    ['   Every player has a personal invite link. Each friend who joins through it earns that player 1 bonus question.'],
-    ['   Knocked out? A bonus brings them back where they left off. After a wrong answer they get a different question'],
-    ['      at the same level. Comebacks show a small badge on the leaderboard and Hall of Fame.'],
-    ['   Players can use up to 2 bonus questions per day (Bonus Questions Per Day in Settings). Unused bonuses carry over.'],
+    ['COMEBACKS'],
+    ['   Every player has a personal invite link. When a friend joins with it AND answers 3 questions, the inviter gets 1 comeback.'],
+    ['   A comeback continues a run that just ended, with a different question at the same level.'],
+    ['   Players can use up to Bonus Questions Per Day comebacks per day (Settings). Unused ones carry over.'],
     [''],
     ['QUESTION REPORTS'],
     ['   Players can tap "Report this question" (wrong answer, more than one right answer, or confusing).'],
@@ -599,196 +925,7 @@ function login(name, pin, deviceId) {
 
 
 
-/* =============================================================
- * CALLED BY THE GAME WEBSITE
- * =============================================================
- * HOW A RUN WORKS (version 7)
- *   - Day 1's question is available the moment you join (or after a restart).
- *   - After that, one question per calendar day. Everyone's next question
- *     unlocks at midnight in the Time Zone setting.
- *   - Each player gets a random question from the right difficulty level
- *     for their question number, never one they've already seen if possible.
- *   - Wrong answer = out. Missing a day uses one of your pause days
- *     (Pause Days Per Run). Running out of pause days = out.
- *   - Out? Start a new run for free any time. Or use a bonus question
- *     (earned when a friend joins with your link) to come back where you left off.
- * ============================================================= */
 
-function getState(token, ref) {
-  const s = settings_();
-  const state = {
-    gameName: s.gameName,
-    tagline: s.tagline,
-    length: s.length,
-    bonusLimit: s.bonusPerDay,
-    pauseLimit: s.pauseLimit,
-    shareUrl: gameUrl_(),
-    referrerName: '',
-    player: null,
-    question: null,
-    questionMissing: false,
-    countdown: secondsToReset_(s),
-    reveal: null,
-    ads: { reveal: null, slot: null },
-    disclosure: s.showAds ? AMAZON_DISCLOSURE : ''
-  };
-
-  const lock = LockService.getScriptLock();
-  lock.waitLock(15000);
-  try {
-    const data = readPlayers_();
-    if (ref && !token) {
-      const refRow = data.rows.find(r => r[P.ID] === ref);
-      if (refRow) state.referrerName = String(refRow[P.NAME]);
-    }
-    if (!token) return state;
-
-    const i = data.rows.findIndex(r => r[P.TOKEN] && r[P.TOKEN] === token);
-    if (i < 0) return state;
-    const row = data.rows[i];
-    let changed = checkMissed_(row, Date.now(), s);
-
-    const today = todayKey_(s);
-    const status = String(row[P.STATUS]);
-    const days = Number(row[P.DAYS]) || 0;
-    const lastDate = normDate_(row[P.LASTDATE], s);
-    const answeredToday = status === 'Alive' && lastDate === today;
-    const usedToday = bonusUsedToday_(row, s);
-    const bonus = Number(row[P.BONUS]) || 0;
-    const reason = String(row[P.REASON] || '');
-
-    state.player = {
-      name: String(row[P.NAME]),
-      status: status,
-      questionNumber: Math.min(days + 1, s.length),
-      daysSurvived: days,
-      outOnDay: Number(row[P.OUTDAY]) || 0,
-      outReason: reason,
-      best: Math.max(Number(row[P.BEST]) || 0, days),
-      attempt: Number(row[P.ATTEMPT]) || 1,
-      bonus: bonus,
-      bonusUsedToday: usedToday,
-      friendsInvited: Number(row[P.FRIENDS]) || 0,
-      pausesLeft: Math.max(0, s.pauseLimit - (Number(row[P.PAUSES]) || 0)),
-      comebacks: Number(row[P.COMEBACKS]) || 0,
-      answeredToday: answeredToday,
-      inviteUrl: state.shareUrl ? state.shareUrl + (state.shareUrl.indexOf('?') >= 0 ? '&' : '?') + 'ref=' + row[P.ID] : '',
-      canComeBack: status === 'Out' && reason !== 'Removed by admin' && bonus > 0 && usedToday < s.bonusPerDay,
-      canRestart: (status === 'Out' && reason !== 'Removed by admin') || status === 'Champion',
-      restartIsInstant: normDate_(row[P.RESTARTDATE], s) !== today
-    };
-
-    if (status === 'Alive' && !answeredToday) {
-      const served = serveQuestion_(row, s);
-      if (served.changed) changed = true;
-      if (served.q) {
-        const q = served.q;
-        state.question = { number: days + 1, secondChance: served.secondChance, difficulty: q.difficulty,
-          text: q.text, choices: { A: q.A, B: q.B, C: q.C, D: q.D } };
-        const shownKey = q.id + '|' + (Number(row[P.ATTEMPT]) || 1) + '|' + (days + 1);
-        if (String(row[P.SHOWNQ]) !== shownKey) {
-          row[P.SHOWNQ] = shownKey;
-          row[P.SHOWNAT] = Date.now();
-          changed = true;
-        }
-      } else {
-        state.questionMissing = true;
-      }
-    }
-
-    // The answer to your last question is revealed after the next midnight reset.
-    if (row[P.LASTQ] && lastDate && lastDate < today) state.reveal = reveal_(row[P.LASTQ]);
-    state.player.lastQuestionId = String(row[P.LASTQ] || '');
-
-    // Rank by best run, and the player's circle (who invited them, and who they invited)
-    const bestOf = r => Math.max(Number(r[P.BEST]) || 0, Number(r[P.DAYS]) || 0);
-    const named = data.rows.filter(r => r[P.NAME]);
-    const myBest = bestOf(row);
-    state.player.rank = 1 + named.filter(r => bestOf(r) > myBest).length;
-    state.player.totalPlayers = named.length;
-    state.circle = named.filter(r => r[P.ID] !== row[P.ID] && (r[P.ID] === row[P.REFBY] || r[P.REFBY] === row[P.ID]))
-      .map(r => {
-        const c = r.slice();
-        checkMissed_(c, Date.now(), s);
-        return {
-          name: String(c[P.NAME]),
-          relation: c[P.ID] === row[P.REFBY] ? 'invited you' : 'you invited',
-          status: String(c[P.STATUS]),
-          survived: Number(c[P.DAYS]) || 0,
-          best: bestOf(c),
-          answeredToday: c[P.STATUS] === 'Alive' && normDate_(c[P.LASTDATE], s) === today
-        };
-      })
-      .sort((a, b) => b.survived - a.survived || a.name.localeCompare(b.name));
-
-    if (changed) writePlayer_(data.sh, i, row);
-  } finally {
-    lock.releaseLock();
-  }
-
-  try {
-    if (s.showAds && state.player) {
-      if (state.reveal) state.ads.reveal = pickAd_(state.reveal.id, s);
-      const st = state.player.status;
-      const slot = st === 'Out' ? 'Knockout' : st === 'Champion' ? 'Champion'
-        : (st === 'Alive' && state.player.answeredToday) ? 'Waiting' : '';
-      if (slot) state.ads.slot = pickAd_(slot, s);
-    }
-  } catch (err) { Logger.log(err); }
-  return state;
-}
-
-function getLeaderboard() {
-  const s = settings_();
-  const now = Date.now();
-  const today = todayKey_(s);
-  const rows = readPlayers_().rows.filter(r => r[P.NAME]).map(r => {
-    const copy = r.slice();
-    checkMissed_(copy, now, s); // display only; the hourly check saves it
-    return copy;
-  });
-
-  const alive = rows.filter(r => r[P.STATUS] === 'Alive').map(r => ({
-    name: String(r[P.NAME]),
-    survived: Number(r[P.DAYS]) || 0,
-    comebacks: Number(r[P.COMEBACKS]) || 0,
-    answeredToday: normDate_(r[P.LASTDATE], s) === today
-  })).sort((a, b) => b.survived - a.survived || a.name.localeCompare(b.name));
-
-  const out = rows.filter(r => r[P.STATUS] === 'Out').map(r => ({
-    name: String(r[P.NAME]),
-    outOnDay: Number(r[P.OUTDAY]) || 0,
-    reason: String(r[P.REASON] || ''),
-    best: Number(r[P.BEST]) || 0
-  })).sort((a, b) => b.best - a.best || b.outOnDay - a.outOnDay || a.name.localeCompare(b.name)).slice(0, 100);
-
-  const recruiters = rows.filter(r => Number(r[P.FRIENDS]) > 0)
-    .map(r => ({ name: String(r[P.NAME]), friends: Number(r[P.FRIENDS]) }))
-    .sort((a, b) => b.friends - a.friends || a.name.localeCompare(b.name)).slice(0, 5);
-
-  const hallSheet = ss_().getSheetByName(TAB.HALL);
-  let hall = [];
-  if (hallSheet.getLastRow() > 1) {
-    hall = hallSheet.getRange(2, 1, hallSheet.getLastRow() - 1, HALL_HEADERS.length).getValues()
-      .filter(r => r[1])
-      .map(r => ({
-        name: String(r[1]),
-        date: r[0] instanceof Date ? Utilities.formatDate(r[0], s.tz, 'MMM d, yyyy') : String(r[0]),
-        attempt: Number(r[2]) || 1,
-        comebacks: Number(r[4]) || 0
-      }))
-      .reverse().slice(0, 25);
-  }
-
-  const bestRuns = rows.map(r => ({
-    name: String(r[P.NAME]),
-    best: Math.max(Number(r[P.BEST]) || 0, Number(r[P.DAYS]) || 0),
-    status: String(r[P.STATUS])
-  })).filter(r => r.best > 0)
-    .sort((a, b) => b.best - a.best || a.name.localeCompare(b.name)).slice(0, 10);
-
-  return { alive: alive, out: out, hall: hall, recruiters: recruiters, bestRuns: bestRuns, total: rows.length, length: s.length };
-}
 
 // A visitor can try one Easy question before signing up.
 function getGuestQuestion() {
@@ -798,253 +935,10 @@ function getGuestQuestion() {
   return { id: q.id, difficulty: q.difficulty, text: q.text, choices: { A: q.A, B: q.B, C: q.C, D: q.D } };
 }
 
-// Checks a visitor's answer. The correct letter is never sent back.
-function guestAnswer(id, choice) {
-  choice = String(choice || '').toUpperCase();
-  if (!/^[ABCD]$/.test(choice)) throw new Error('Pick A, B, C, or D.');
-  const q = question_(String(id || ''));
-  if (!q || q.difficulty !== 'Easy') throw new Error('That question is not available. Please refresh.');
-  const correct = choice === q.correct;
-  try {
-    ss_().getSheetByName(TAB.ANSWERS).appendRow([new Date(), 'GUEST', '(visitor)', '', 1, q.id, choice, correct ? 'Yes' : 'No', '']);
-  } catch (err) { Logger.log(err); }
-  return { correct: correct, secondsToReset: secondsToReset_(settings_()) };
-}
 
-function join(name, pin, confirmed13, ref, deviceId, guest) {
-  name = String(name || '').trim().replace(/\s+/g, ' ');
-  pin = String(pin || '').trim();
-  ref = String(ref || '');
-  deviceId = cleanDevice_(deviceId);
-  if (!confirmed13) throw new Error('You must confirm you are 13 or older to play.');
-  if (!/^[A-Za-z0-9 _.\-]{2,20}$/.test(name)) {
-    throw new Error('Pick a display name 2 to 20 characters long, using letters, numbers, spaces, dashes, dots, or underscores.');
-  }
-  if (!/^\d{4,6}$/.test(pin)) throw new Error('Your PIN must be 4 to 6 numbers.');
 
-  const s = settings_();
-  const lock = LockService.getScriptLock();
-  lock.waitLock(15000);
-  try {
-    const data = readPlayers_();
-    if (data.rows.some(r => String(r[P.NAME]).toLowerCase() === name.toLowerCase())) {
-      throw new Error('That display name is taken. Try another one.');
-    }
 
-    const now = Date.now();
-    let refId = '';
-    let refRow = null;
-    if (/^P[a-f0-9]{10}$/.test(ref)) {
-      const ri = data.rows.findIndex(r => r[P.ID] === ref);
-      if (ri >= 0) {
-        refRow = data.rows[ri];
-        refRow[P.BONUS] = (Number(refRow[P.BONUS]) || 0) + 1;
-        refRow[P.FRIENDS] = (Number(refRow[P.FRIENDS]) || 0) + 1;
-        writePlayer_(data.sh, ri, refRow);
-        refId = ref;
-      }
-    }
 
-    // Did they already get the visitor question right? Check it here, never trust the browser.
-    let guestCorrect = false, guestId = '';
-    if (guest && guest.id) {
-      const gq = question_(String(guest.id));
-      if (gq && gq.difficulty === 'Easy') {
-        guestId = gq.id;
-        guestCorrect = String(guest.choice || '').toUpperCase() === gq.correct;
-      }
-    }
-
-    const id = 'P' + Utilities.getUuid().replace(/-/g, '').slice(0, 10);
-    const token = Utilities.getUuid();
-    const row = new Array(PLAYER_HEADERS.length).fill('');
-    row[P.ID] = id;
-    row[P.NAME] = name;
-    row[P.HASH] = hash_(id, pin);
-    row[P.TOKEN] = token;
-    row[P.JOINED] = new Date(now);
-    row[P.AGE] = 'Yes';
-    row[P.STATUS] = 'Alive';
-    row[P.START] = new Date(now);
-    row[P.ATTEMPT] = 1;
-    row[P.DAYS] = guestCorrect ? 1 : 0;
-    row[P.BEST] = guestCorrect ? 1 : 0;
-    row[P.BONUS] = 0;
-    row[P.BONUSUSED] = 0;
-    row[P.REFBY] = refId;
-    row[P.FRIENDS] = 0;
-    row[P.DEVICES] = deviceId;
-    row[P.FAST] = 0;
-    row[P.PAUSES] = 0;
-    row[P.COMEBACKS] = 0;
-    row[P.SEEN] = guestId;
-    row[P.LASTQ] = guestCorrect ? guestId : '';
-    row[P.LASTDATE] = guestCorrect ? todayKey_(s) : yesterdayKey_(s);
-    data.sh.appendRow(row);
-    data.sh.getRange(data.sh.getLastRow(), P.LASTDATE + 1, 1, 1).setNumberFormat('@');
-
-    try {
-      if (deviceId) sameDeviceCheck_(data.rows, row, deviceId);
-      if (refRow) {
-        const recent = data.rows.filter(r => r[P.REFBY] === refId &&
-          r[P.JOINED] instanceof Date && now - r[P.JOINED].getTime() < DAY_MS).length + 1;
-        if (recent >= CHEAT.BURST_FRIENDS) {
-          alert_('Sign-up burst', String(refRow[P.NAME]),
-            recent + ' people joined with ' + refRow[P.NAME] + '\'s invite link in the last 24 hours. Newest: ' + name +
-            '. Could be real friends, or fake accounts made to earn bonus questions.',
-            'burst|' + refId + '|' + todayKey_(s));
-        }
-      }
-    } catch (err) { Logger.log(err); }
-
-    return { token: token, startedWithCorrect: guestCorrect };
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-function submitAnswer(token, choice) {
-  choice = String(choice || '').toUpperCase();
-  if (!/^[ABCD]$/.test(choice)) throw new Error('Pick A, B, C, or D.');
-  const s = settings_();
-  const now = Date.now();
-
-  const lock = LockService.getScriptLock();
-  lock.waitLock(15000);
-  try {
-    const data = readPlayers_();
-    const i = data.rows.findIndex(r => r[P.TOKEN] && r[P.TOKEN] === token);
-    if (i < 0) throw new Error('Please log in again.');
-    const row = data.rows[i];
-
-    if (checkMissed_(row, now, s) && row[P.STATUS] !== 'Alive') {
-      writePlayer_(data.sh, i, row);
-      return { result: 'missed', outOnDay: row[P.OUTDAY] };
-    }
-    if (row[P.STATUS] !== 'Alive') throw new Error('You are not in a run right now.');
-    const today = todayKey_(s);
-    if (normDate_(row[P.LASTDATE], s) === today) throw new Error('You already answered today. Your next question unlocks at midnight.');
-
-    const served = serveQuestion_(row, s);
-    const q = served.q;
-    if (!q) throw new Error('Your question is not ready yet. Please refresh.');
-
-    const days = Number(row[P.DAYS]) || 0;
-    const qnum = days + 1;
-    const correct = choice === q.correct;
-    const shownKey = q.id + '|' + (Number(row[P.ATTEMPT]) || 1) + '|' + qnum;
-    const secs = (String(row[P.SHOWNQ]) === shownKey && Number(row[P.SHOWNAT]))
-      ? Math.round((now - Number(row[P.SHOWNAT])) / 100) / 10 : '';
-    ss_().getSheetByName(TAB.ANSWERS).appendRow(
-      [new Date(now), row[P.ID], row[P.NAME], row[P.ATTEMPT], qnum, q.id, choice, correct ? 'Yes' : 'No', secs]);
-
-    if (correct && secs !== '' && secs < CHEAT.FAST_SECONDS && /hard/i.test(q.difficulty)) {
-      row[P.FAST] = (Number(row[P.FAST]) || 0) + 1;
-      if (Number(row[P.FAST]) % CHEAT.FAST_COUNT === 0) {
-        try {
-          alert_('Lightning answers', String(row[P.NAME]),
-            row[P.NAME] + ' has answered ' + row[P.FAST] + ' Hard or Very Hard questions correctly in under ' +
-            CHEAT.FAST_SECONDS + ' seconds each. Latest: question ' + q.id + ' in ' + secs +
-            ' seconds. They may be getting answers from someone else.',
-            'fast|' + row[P.ID] + '|' + row[P.FAST]);
-        } catch (err) { Logger.log(err); }
-      }
-    }
-
-    row[P.LASTDATE] = today;
-    row[P.LASTQ] = q.id;
-    row[P.CURQ] = '';
-    row[P.SEEN] = addSeen_(row[P.SEEN], q.id);
-    let champion = false;
-    if (correct) {
-      row[P.DAYS] = qnum;
-      row[P.BEST] = Math.max(Number(row[P.BEST]) || 0, qnum);
-      if (qnum >= s.length) {
-        champion = true;
-        row[P.STATUS] = 'Champion';
-        ss_().getSheetByName(TAB.HALL).appendRow([new Date(now), row[P.NAME], row[P.ATTEMPT], qnum, Number(row[P.COMEBACKS]) || 0]);
-      }
-    } else {
-      row[P.STATUS] = 'Out';
-      row[P.OUTDAY] = qnum;
-      row[P.REASON] = 'Wrong answer';
-    }
-    writePlayer_(data.sh, i, row);
-    data.sh.getRange(i + 2, P.LASTDATE + 1, 1, 1).setNumberFormat('@');
-
-    let ad = null;
-    try {
-      if (s.showAds) ad = pickAd_(champion ? 'Champion' : correct ? 'Waiting' : 'Knockout', s);
-    } catch (err) { Logger.log(err); }
-    return {
-      ad: ad,
-      disclosure: s.showAds ? AMAZON_DISCLOSURE : '',
-      result: correct ? 'correct' : 'wrong',
-      questionNumber: qnum,
-      daysSurvived: Number(row[P.DAYS]) || 0,
-      length: s.length,
-      champion: champion,
-      secondsToNext: secondsToReset_(s)
-    };
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-// Spend 1 bonus question (earned when a friend joins with your link) to come back
-// where you left off after being knocked out. Limit per day is in Settings.
-function useBonus(token) {
-  const s = settings_();
-  const lock = LockService.getScriptLock();
-  lock.waitLock(15000);
-  try {
-    const data = readPlayers_();
-    const i = data.rows.findIndex(r => r[P.TOKEN] && r[P.TOKEN] === token);
-    if (i < 0) throw new Error('Please log in again.');
-    const row = data.rows[i];
-    checkMissed_(row, Date.now(), s);
-
-    if (row[P.STATUS] !== 'Out') throw new Error('Bonus questions are for coming back after you get knocked out. Yours will be saved until then.');
-    if (row[P.REASON] === 'Removed by admin') throw new Error('This run was ended by the game organizer.');
-    if ((Number(row[P.BONUS]) || 0) <= 0) {
-      throw new Error('You do not have a bonus question yet. Share your invite link. Each friend who joins earns you one.');
-    }
-    const used = bonusUsedToday_(row, s);
-    if (used >= s.bonusPerDay) {
-      throw new Error('You have used your ' + s.bonusPerDay + ' bonus questions for today. Your bonuses will still be here tomorrow.');
-    }
-    comeBack_(row, s);
-    row[P.BONUS] = (Number(row[P.BONUS]) || 0) - 1;
-    row[P.BONUSDATE] = todayKey_(s);
-    row[P.BONUSUSED] = used + 1;
-    writePlayer_(data.sh, i, row);
-    return { ok: true };
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-// Start a brand-new run at question 1, free. Available after being knocked out or finishing.
-// The first restart each day gets a question right away; after that, the new run starts at midnight.
-function newRun(token) {
-  const s = settings_();
-  const lock = LockService.getScriptLock();
-  lock.waitLock(15000);
-  try {
-    const data = readPlayers_();
-    const i = data.rows.findIndex(r => r[P.TOKEN] && r[P.TOKEN] === token);
-    if (i < 0) throw new Error('Please log in again.');
-    const row = data.rows[i];
-    checkMissed_(row, Date.now(), s);
-    const ok = (row[P.STATUS] === 'Out' && row[P.REASON] !== 'Removed by admin') || row[P.STATUS] === 'Champion';
-    if (!ok) throw new Error('You can start a new run after this one ends.');
-    const instant = startRun_(row, s, false);
-    writePlayer_(data.sh, i, row);
-    return { ok: true, instant: instant };
-  } finally {
-    lock.releaseLock();
-  }
-}
 
 // Counts shares for the Admin Panel. Nothing in the game depends on it.
 function logShare(kind) {
@@ -1118,91 +1012,44 @@ function applyQuestionFixes_(ss) {
   return count;
 }
 
+// Adds any built-in questions the Questions tab doesn't have yet (runs once per question set).
+// If one of your own questions already uses the same ID, the new question gets the next free ID instead.
+const STARTER_SET_VERSION = 'v9';
+function addNewStarterQuestions_(ss) {
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('STARTER_SET') === STARTER_SET_VERSION) return 0;
+  const sh = ss.getSheetByName(TAB.QUESTIONS);
+  if (!sh || sh.getLastRow() < 2) { props.setProperty('STARTER_SET', STARTER_SET_VERSION); return 0; }
+  const rows = sh.getRange(2, 1, sh.getLastRow() - 1, QUESTION_HEADERS.length).getValues();
+  const ids = {}, texts = {};
+  let max = 0;
+  rows.forEach(r => {
+    const id = String(r[0]).trim();
+    ids[id] = true;
+    texts[normText_(r[2])] = true;
+    const m = id.match(/^Q(\d+)$/);
+    if (m) max = Math.max(max, Number(m[1]));
+  });
+  const add = [];
+  STARTER_QUESTIONS.forEach(r => {
+    if (texts[normText_(r[2])]) return;
+    const row = r.slice();
+    if (ids[row[0]]) { max = Math.max(max, Number(String(row[0]).slice(1))); row[0] = qid_(++max); }
+    ids[row[0]] = true;
+    add.push(row);
+  });
+  if (add.length) sh.getRange(sh.getLastRow() + 1, 1, add.length, QUESTION_HEADERS.length).setValues(add);
+  QUESTION_CACHE_ = null;
+  props.setProperty('STARTER_SET', STARTER_SET_VERSION);
+  return add.length;
+}
+
 /* ---------------- run helpers ---------------- */
 
-// Resets a row to a fresh run. Returns true if their first question is available right away.
-function startRun_(row, s, forceInstant) {
-  const today = todayKey_(s);
-  const instant = forceInstant || normDate_(row[P.RESTARTDATE], s) !== today;
-  row[P.BEST] = Math.max(Number(row[P.BEST]) || 0, Number(row[P.DAYS]) || 0);
-  row[P.STATUS] = 'Alive';
-  row[P.START] = new Date();
-  row[P.ATTEMPT] = (Number(row[P.ATTEMPT]) || 1) + 1;
-  row[P.DAYS] = 0;
-  row[P.OUTDAY] = '';
-  row[P.REASON] = '';
-  row[P.CURQ] = '';
-  row[P.PAUSES] = 0;
-  row[P.COMEBACKS] = 0;
-  row[P.LASTDATE] = instant ? yesterdayKey_(s) : today;
-  if (!forceInstant) row[P.RESTARTDATE] = today;
-  return instant;
-}
 
-// Brings a knocked-out player back where they left off, with a new question right away.
-function comeBack_(row, s) {
-  const wasWrong = row[P.REASON] === 'Wrong answer';
-  const wasMissed = /^Missed/.test(String(row[P.REASON] || ''));
-  const days = Number(row[P.DAYS]) || 0;
-  row[P.STATUS] = 'Alive';
-  row[P.OUTDAY] = '';
-  row[P.REASON] = '';
-  row[P.COMEBACKS] = (Number(row[P.COMEBACKS]) || 0) + 1;
-  row[P.LASTDATE] = yesterdayKey_(s);
-  if (wasMissed) row[P.PAUSES] = s.pauseLimit; // back in, but no pause days left this run
-  // A different question at the same level, never the one they just missed.
-  const pick = wasWrong ? pickQuestion_(tierFor_(days + 1, s.length), seenList_(row[P.SEEN]), [String(row[P.LASTQ] || '')]) : '';
-  row[P.CURQ] = pick ? '!' + pick : '';
-}
 
-// Marks missed days. Each missed day uses a pause day; running out of pause days ends the run.
-// Missed days don't count before a player answers their first question of a run.
-// Returns true if it changed the row.
-function checkMissed_(row, now, s) {
-  if (!row[P.NAME] || row[P.STATUS] !== 'Alive') return false;
-  const todayN = dayNum_(todayKey_(s));
-  const yesterday = yesterdayKey_(s);
-  const last = normDate_(row[P.LASTDATE], s);
-  if (!last) { row[P.LASTDATE] = yesterday; return true; }
-  const missed = todayN - dayNum_(last) - 1;
-  if (missed <= 0) return false;
-  row[P.LASTDATE] = yesterday;
-  if ((Number(row[P.DAYS]) || 0) === 0) return true; // the first question just waits for them
-  row[P.PAUSES] = (Number(row[P.PAUSES]) || 0) + missed;
-  if (Number(row[P.PAUSES]) > s.pauseLimit) {
-    row[P.STATUS] = 'Out';
-    row[P.OUTDAY] = (Number(row[P.DAYS]) || 0) + 1;
-    row[P.REASON] = 'Missed too many days';
-    row[P.BEST] = Math.max(Number(row[P.BEST]) || 0, Number(row[P.DAYS]) || 0);
-    row[P.CURQ] = '';
-  }
-  return true;
-}
 
-// Gives the player their current question, picking a new random one if needed.
-function serveQuestion_(row, s) {
-  // A Second Chance question is stored with a ! in front of its ID.
-  const cur = String(row[P.CURQ] || '');
-  if (cur) {
-    const second = cur.charAt(0) === '!';
-    const q = question_(second ? cur.slice(1) : cur);
-    if (q && q.active) return { q: q, changed: false, secondChance: second };
-  }
-  const qnum = (Number(row[P.DAYS]) || 0) + 1;
-  const id = pickQuestion_(tierFor_(qnum, s.length), seenList_(row[P.SEEN]), [String(row[P.LASTQ] || '')]);
-  if (!id) return { q: null, changed: false, secondChance: false };
-  row[P.CURQ] = id;
-  return { q: question_(id), changed: true, secondChance: false };
-}
 
-// Which difficulty a question number gets. With a 30-day run: 1-7 Easy, 8-14 Medium, 15-21 Hard, 22-30 Very Hard.
-function tierFor_(qnum, length) {
-  const f = qnum / Math.max(1, length);
-  if (f <= 7 / 30 + 1e-9) return 'Easy';
-  if (f <= 14 / 30 + 1e-9) return 'Medium';
-  if (f <= 21 / 30 + 1e-9) return 'Hard';
-  return 'Very Hard';
-}
 
 // Picks a random active question at a difficulty level, skipping ones already seen when possible.
 function pickQuestion_(tier, seen, avoid) {
@@ -1225,7 +1072,7 @@ function seenList_(v) { return String(v || '').split(',').map(x => x.trim()).fil
 function addSeen_(v, id) {
   const list = seenList_(v).filter(x => x !== id);
   list.push(id);
-  return list.slice(-400).join(',');
+  return list.slice(-1500).join(',');
 }
 
 let QUESTION_CACHE_ = null;
@@ -1338,7 +1185,7 @@ function upgradeToV7_(ss) {
       if (!/^Q\d{3}$/.test(id)) { id = 'Q' + (extra++); active = 'No'; }
       let text = String(r[2]);
       if (id === 'Q030' && /^What is the largest desert on Earth\?$/.test(text.trim())) text = STARTER_QUESTIONS[29][2];
-      return [id, normDifficulty_(r[1]), text, r[3], r[4], r[5], r[6], String(r[7]).trim().toUpperCase(), r[8], active];
+      return [id, normDifficulty_(r[1]), text, r[3], r[4], r[5], r[6], String(r[7]).trim().toUpperCase(), r[8], active, 'Holdout'];
     });
     const have = {};
     rows.forEach(r => { have[r[0]] = true; });
@@ -1396,6 +1243,821 @@ function upgradeToV7_(ss) {
 }
 
 /* =============================================================
+ * CALLED BY THE GAME WEBSITE (version 9: Endless + Daily)
+ * =============================================================
+ * ENDLESS (the main game)
+ *   - Play as much as you want. One life: a wrong answer ends the run.
+ *   - Questions get harder as the run goes: 1-5 Easy, 6-12 Medium,
+ *     13-20 Hard, 21 and up Very Hard. Score = how many in a row.
+ *   - The correct answer and fun fact show right after each answer.
+ *   - Start a new run any time. Reaching Run Length in a row (30)
+ *     puts you in the Hall of Fame.
+ *   - Comebacks: each friend who joins with your link AND answers
+ *     3 questions earns you 1 bonus. A bonus continues a lost run
+ *     with a different question. Up to Bonus Questions Per Day per day.
+ * DAILY HOLDOUT
+ *   - The same 10 questions for everyone each day (3 Easy, 3 Medium,
+ *     2 Hard, 2 Very Hard). One try per day, stops at the first miss.
+ *   - Answers are revealed the next day. Daily streaks count days played in a row.
+ * ACCOUNTS
+ *   - No sign-up needed. The first answer creates a player with a fun
+ *     automatic name saved on that device. "Save my spot" adds a name
+ *     and PIN so they can log in anywhere.
+ * ============================================================= */
+
+const DAILY_PLAN = ['Easy', 'Easy', 'Easy', 'Medium', 'Medium', 'Medium', 'Hard', 'Hard', 'Very Hard', 'Very Hard'];
+const REF_CREDIT_AFTER = 3; // a friend must answer this many questions before the inviter gets a bonus
+
+function endlessTier_(n) {
+  if (n <= 5) return 'Easy';
+  if (n <= 12) return 'Medium';
+  if (n <= 20) return 'Hard';
+  return 'Very Hard';
+}
+
+/* ---------------- state ---------------- */
+
+function getState(token, ref) {
+  const s = settings_();
+  const state = {
+    gameName: s.gameName,
+    tagline: s.tagline,
+    hallAt: s.length,
+    bonusLimit: s.bonusPerDay,
+    shareUrl: gameUrl_(),
+    referrerName: '',
+    player: null,
+    question: null,
+    answeredToday: dayCount_('ANS_', s),
+    playersToday: dayCount_('PLAY_', s),
+    disclosure: s.showAds ? AMAZON_DISCLOSURE : '',
+    slotAd: null
+  };
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const data = readPlayers_();
+    if (ref && !token) {
+      const refRow = data.rows.find(r => r[P.ID] === ref);
+      if (refRow) state.referrerName = String(refRow[P.NAME]);
+    }
+    const i = token ? findTokenRow_(data, token) : -1;
+    if (i < 0) return state;
+    const row = data.rows[i];
+    let changed = false;
+    if (row[P.STATUS] === 'Alive') {
+      const served = serveEndless_(row, s);
+      if (served.changed) changed = true;
+      if (served.q) state.question = publicQuestion_(served.q, (Number(row[P.DAYS]) || 0) + 1, served.secondChance);
+    }
+    if (changed) writePlayer_(data.sh, i, row);
+    state.player = profile_(row, data, s);
+    state.circle = circle_(row, data, s);
+  } finally {
+    lock.releaseLock();
+  }
+  try {
+    if (s.showAds && state.player && state.player.status === 'Out') state.slotAd = pickAd_('Knockout', s);
+  } catch (err) { Logger.log(err); }
+  return state;
+}
+
+function profile_(row, data, s) {
+  const today = todayKey_(s);
+  const score = Number(row[P.DAYS]) || 0;
+  const status = String(row[P.STATUS] || 'Ready');
+  const bonus = Number(row[P.BONUS]) || 0;
+  const usedToday = bonusUsedToday_(row, s);
+  const reason = String(row[P.REASON] || '');
+  const bestOf = r => Math.max(Number(r[P.BEST]) || 0, Number(r[P.DAYS]) || 0);
+  const named = data.rows.filter(r => r[P.NAME]);
+  const myBest = bestOf(row);
+  const base = gameUrl_();
+  return {
+    name: String(row[P.NAME]),
+    saved: String(row[P.SAVED]) === 'Yes',
+    status: status,
+    score: score,
+    best: myBest,
+    attempt: Number(row[P.ATTEMPT]) || 1,
+    outOn: Number(row[P.OUTDAY]) || 0,
+    outReason: reason,
+    comebacks: Number(row[P.COMEBACKS]) || 0,
+    bonus: bonus,
+    bonusUsedToday: usedToday,
+    canComeBack: status === 'Out' && reason === 'Wrong answer' && bonus > 0 && usedToday < s.bonusPerDay,
+    friendsInvited: Number(row[P.FRIENDS]) || 0,
+    inviteUrl: base ? base + (base.indexOf('?') >= 0 ? '&' : '?') + 'ref=' + row[P.ID] : '',
+    lastQuestionId: String(row[P.LASTQ] || ''),
+    rank: 1 + named.filter(r => bestOf(r) > myBest).length,
+    totalPlayers: named.length,
+    dailyDoneToday: normDate_(row[P.DAILYDATE], s) === today && String(row[P.DAILYDONE]) === 'Yes',
+    dailyStreak: dailyStreakNow_(row, s),
+    dailyBest: Number(row[P.DAILYBEST]) || 0
+  };
+}
+
+function circle_(row, data, s) {
+  const today = todayKey_(s);
+  return data.rows.filter(r => r[P.NAME] && r[P.ID] !== row[P.ID] && (r[P.ID] === row[P.REFBY] || r[P.REFBY] === row[P.ID]))
+    .map(r => ({
+      name: String(r[P.NAME]),
+      relation: r[P.ID] === row[P.REFBY] ? 'invited you' : 'you invited',
+      best: Math.max(Number(r[P.BEST]) || 0, Number(r[P.DAYS]) || 0),
+      playing: r[P.STATUS] === 'Alive' ? Number(r[P.DAYS]) || 0 : null,
+      dailyToday: normDate_(r[P.DAILYDATE], s) === today && String(r[P.DAILYDONE]) === 'Yes' ? Number(r[P.DAILYSCORE]) || 0 : null
+    }))
+    .sort((a, b) => b.best - a.best || a.name.localeCompare(b.name));
+}
+
+function getLeaderboard() {
+  const s = settings_();
+  const today = todayKey_(s);
+  const rows = readPlayers_().rows.filter(r => r[P.NAME]);
+  const bestOf = r => Math.max(Number(r[P.BEST]) || 0, Number(r[P.DAYS]) || 0);
+
+  const allTime = rows.map(r => ({ name: String(r[P.NAME]), best: bestOf(r) }))
+    .filter(r => r.best > 0).sort((a, b) => b.best - a.best || a.name.localeCompare(b.name)).slice(0, 20);
+  const todayBest = rows.filter(r => normDate_(r[P.TODAYDATE], s) === today)
+    .map(r => ({ name: String(r[P.NAME]), best: Number(r[P.TODAYBEST]) || 0 }))
+    .filter(r => r.best > 0).sort((a, b) => b.best - a.best || a.name.localeCompare(b.name)).slice(0, 10);
+  const liveNow = rows.filter(r => r[P.STATUS] === 'Alive' && Number(r[P.DAYS]) > 0)
+    .map(r => ({ name: String(r[P.NAME]), score: Number(r[P.DAYS]) || 0, comebacks: Number(r[P.COMEBACKS]) || 0 }))
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name)).slice(0, 10);
+  const daily = rows.filter(r => normDate_(r[P.DAILYDATE], s) === today && String(r[P.DAILYDONE]) === 'Yes')
+    .map(r => ({ name: String(r[P.NAME]), score: Number(r[P.DAILYSCORE]) || 0, streak: dailyStreakNow_(r, s) }))
+    .sort((a, b) => b.score - a.score || b.streak - a.streak || a.name.localeCompare(b.name));
+  const recruiters = rows.filter(r => Number(r[P.FRIENDS]) > 0)
+    .map(r => ({ name: String(r[P.NAME]), friends: Number(r[P.FRIENDS]) }))
+    .sort((a, b) => b.friends - a.friends || a.name.localeCompare(b.name)).slice(0, 5);
+
+  const hallSheet = ss_().getSheetByName(TAB.HALL);
+  let hall = [];
+  if (hallSheet.getLastRow() > 1) {
+    hall = hallSheet.getRange(2, 1, hallSheet.getLastRow() - 1, HALL_HEADERS.length).getValues()
+      .filter(r => r[1])
+      .map(r => ({ name: String(r[1]), date: r[0] instanceof Date ? Utilities.formatDate(r[0], s.tz, 'MMM d, yyyy') : String(r[0]),
+        comebacks: Number(r[4]) || 0 }))
+      .reverse().slice(0, 25);
+  }
+  return {
+    allTime: allTime, today: todayBest, liveNow: liveNow, daily: daily.slice(0, 20), dailyPlayed: daily.length,
+    recruiters: recruiters, hall: hall, hallAt: s.length, total: rows.length,
+    answeredToday: dayCount_('ANS_', s)
+  };
+}
+
+/* ---------------- accounts ---------------- */
+
+const NAME_ADJ = ['Curious', 'Brave', 'Clever', 'Lucky', 'Swift', 'Sunny', 'Witty', 'Bold', 'Jolly', 'Mighty', 'Quiet', 'Zippy',
+  'Cosmic', 'Daring', 'Eager', 'Fancy', 'Gentle', 'Happy', 'Nimble', 'Plucky', 'Rapid', 'Sharp', 'Snappy', 'Wise'];
+const NAME_ANIMAL = ['Otter', 'Falcon', 'Badger', 'Panda', 'Fox', 'Owl', 'Moose', 'Koala', 'Tiger', 'Walrus', 'Heron', 'Lynx',
+  'Puffin', 'Beaver', 'Gecko', 'Llama', 'Raven', 'Bison', 'Dolphin', 'Hedgehog', 'Penguin', 'Squirrel', 'Turtle', 'Yak'];
+
+function autoName_(rows) {
+  const taken = {};
+  rows.forEach(r => { taken[String(r[P.NAME]).toLowerCase()] = true; });
+  for (let t = 0; t < 50; t++) {
+    const n = NAME_ADJ[Math.floor(Math.random() * NAME_ADJ.length)] + ' ' +
+      NAME_ANIMAL[Math.floor(Math.random() * NAME_ANIMAL.length)] + ' ' + (10 + Math.floor(Math.random() * 90));
+    if (!taken[n.toLowerCase()]) return n;
+  }
+  return 'Player ' + Utilities.getUuid().slice(0, 6);
+}
+
+// Creates a player with an automatic name. Returns the row index.
+function createPlayer_(data, s, deviceId, ref) {
+  const now = Date.now();
+  const id = 'P' + Utilities.getUuid().replace(/-/g, '').slice(0, 10);
+  const row = new Array(PLAYER_HEADERS.length).fill('');
+  row[P.ID] = id;
+  row[P.NAME] = autoName_(data.rows);
+  row[P.TOKEN] = Utilities.getUuid();
+  row[P.JOINED] = new Date(now);
+  row[P.AGE] = 'Yes (played)';
+  row[P.STATUS] = 'Ready';
+  row[P.START] = new Date(now);
+  row[P.ATTEMPT] = 0;
+  row[P.DAYS] = 0;
+  row[P.BEST] = 0;
+  row[P.BONUS] = 0;
+  row[P.FRIENDS] = 0;
+  row[P.FAST] = 0;
+  row[P.COMEBACKS] = 0;
+  row[P.TOTALANS] = 0;
+  row[P.SAVED] = 'No';
+  row[P.DEVICES] = cleanDevice_(deviceId);
+  ref = String(ref || '');
+  if (/^P[a-f0-9]{10}$/.test(ref) && data.rows.some(r => r[P.ID] === ref)) row[P.REFBY] = ref;
+  data.sh.appendRow(row);
+  data.rows.push(row);
+  bumpCount_('PLAY_', s);
+  try { if (row[P.DEVICES]) sameDeviceCheck_(data.rows.slice(0, -1), row, row[P.DEVICES]); } catch (err) { Logger.log(err); }
+  return data.rows.length - 1;
+}
+
+function createGuest(deviceId, ref) {
+  const s = settings_();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const data = readPlayers_();
+    const i = createPlayer_(data, s, deviceId, ref);
+    return { token: data.rows[i][P.TOKEN] };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Turns an automatic player into a saved one with a chosen name and PIN.
+function saveAccount(token, name, pin, confirmed13) {
+  name = String(name || '').trim().replace(/\s+/g, ' ');
+  pin = String(pin || '').trim();
+  if (!confirmed13) throw new Error('Please confirm you are 13 or older.');
+  if (!/^[A-Za-z0-9 _.\-]{2,20}$/.test(name)) {
+    throw new Error('Pick a name 2 to 20 characters long, using letters, numbers, spaces, dashes, dots, or underscores.');
+  }
+  if (!/^\d{4,6}$/.test(pin)) throw new Error('Your PIN must be 4 to 6 numbers.');
+  const s = settings_();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const data = readPlayers_();
+    const i = findTokenRow_(data, token);
+    if (i < 0) throw new Error('Please play a question first.');
+    if (data.rows.some((r, j) => j !== i && String(r[P.NAME]).toLowerCase() === name.toLowerCase())) {
+      throw new Error('That name is taken. Try another one.');
+    }
+    const row = data.rows[i];
+    row[P.NAME] = name;
+    row[P.HASH] = hash_(row[P.ID], pin);
+    row[P.SAVED] = 'Yes';
+    row[P.AGE] = 'Yes';
+    writePlayer_(data.sh, i, row);
+    return { ok: true, player: profile_(row, data, s) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* ---------------- Endless ---------------- */
+
+// First answer from a brand-new visitor: creates their player and starts their first run.
+// The website sends the question text too, so an answer is never graded against a different question.
+function startGuestEndless(deviceId, ref, questionId, choice, questionText) {
+  const s = settings_();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const data = readPlayers_();
+    const i = createPlayer_(data, s, deviceId, ref);
+    const row = data.rows[i];
+    startRun_(row, s);
+    const q = question_(String(questionId || ''));
+    const same = q && q.active && (!questionText || normText_(q.text) === normText_(questionText));
+    if (!same) {
+      // The page had an old copy of that question: hand them a fresh one instead of grading.
+      const served = serveEndless_(row, s);
+      writePlayer_(data.sh, i, row);
+      return { retry: true, token: row[P.TOKEN], question: served.q ? publicQuestion_(served.q, 1, false) : null,
+        player: profile_(row, data, s) };
+    }
+    row[P.CURQ] = q.id;
+    const res = answerEndlessRow_(data, i, choice, s);
+    res.token = row[P.TOKEN];
+    return res;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function startEndless(token) {
+  const s = settings_();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const data = readPlayers_();
+    const i = findTokenRow_(data, token);
+    if (i < 0) throw new Error('Please refresh the page.');
+    const row = data.rows[i];
+    if (row[P.STATUS] === 'Alive' && (Number(row[P.DAYS]) || 0) > 0) {
+      throw new Error('You are in the middle of a run. Finish it first!');
+    }
+    if (row[P.REASON] === 'Removed by admin' && row[P.STATUS] === 'Out') throw new Error('This account was paused by the game organizer.');
+    startRun_(row, s);
+    const served = serveEndless_(row, s);
+    writePlayer_(data.sh, i, row);
+    return { question: served.q ? publicQuestion_(served.q, 1, false) : null, player: profile_(row, data, s) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function answerEndless(token, choice) {
+  const s = settings_();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const data = readPlayers_();
+    const i = findTokenRow_(data, token);
+    if (i < 0) throw new Error('Please refresh the page.');
+    return answerEndlessRow_(data, i, choice, s);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function answerEndlessRow_(data, i, choice, s) {
+  choice = String(choice || '').toUpperCase();
+  if (!/^[ABCD]$/.test(choice)) throw new Error('Pick A, B, C, or D.');
+  const row = data.rows[i];
+  if (row[P.STATUS] !== 'Alive') throw new Error('Start a new run to keep playing.');
+  const served = serveEndless_(row, s);
+  const q = served.q;
+  if (!q) throw new Error('No questions are available right now.');
+  const now = Date.now();
+  const n = (Number(row[P.DAYS]) || 0) + 1;
+  const correct = choice === q.correct;
+  const shownKey = q.id + '|' + (Number(row[P.ATTEMPT]) || 1) + '|' + n;
+  const secs = (String(row[P.SHOWNQ]) === shownKey && Number(row[P.SHOWNAT]))
+    ? Math.round((now - Number(row[P.SHOWNAT])) / 100) / 10 : '';
+  ss_().getSheetByName(TAB.ANSWERS).appendRow(
+    [new Date(now), row[P.ID], row[P.NAME], row[P.ATTEMPT], n, q.id, choice, correct ? 'Yes' : 'No', secs, 'Endless']);
+  bumpCount_('ANS_', s);
+  lightningCheck_(row, q, correct, secs);
+
+  row[P.TOTALANS] = (Number(row[P.TOTALANS]) || 0) + 1;
+  row[P.LASTQ] = q.id;
+  row[P.LASTDATE] = todayKey_(s);
+  row[P.CURQ] = '';
+  row[P.SEEN] = addSeen_(row[P.SEEN], q.id);
+  let hall = false;
+  if (correct) {
+    row[P.DAYS] = n;
+    row[P.BEST] = Math.max(Number(row[P.BEST]) || 0, n);
+    const today = todayKey_(s);
+    if (normDate_(row[P.TODAYDATE], s) !== today) { row[P.TODAYDATE] = today; row[P.TODAYBEST] = 0; }
+    row[P.TODAYBEST] = Math.max(Number(row[P.TODAYBEST]) || 0, n);
+    if (n === s.length) {
+      hall = true;
+      ss_().getSheetByName(TAB.HALL).appendRow([new Date(now), row[P.NAME], row[P.ATTEMPT], n, Number(row[P.COMEBACKS]) || 0]);
+    }
+  } else {
+    row[P.STATUS] = 'Out';
+    row[P.OUTDAY] = n;
+    row[P.REASON] = 'Wrong answer';
+  }
+  let next = null;
+  if (correct) {
+    const sv = serveEndless_(row, s);
+    if (sv.q) next = publicQuestion_(sv.q, n + 1, false);
+  }
+  creditReferral_(data, row, s);
+  writePlayer_(data.sh, i, row);
+  formatDateCells_(data.sh, i);
+
+  let ad = null;
+  try {
+    if (s.showAds && !correct) ad = pickAd_(q.id, s) || pickAd_('Knockout', s);
+  } catch (err) { Logger.log(err); }
+  return {
+    correct: correct,
+    questionId: q.id,
+    yourChoice: choice,
+    correctLetter: q.correct,
+    correctText: q[q.correct] || '',
+    funFact: q.funFact,
+    stats: answerStats_(q.id),
+    score: correct ? n : n - 1,
+    hallOfFame: hall,
+    next: next,
+    player: profile_(row, data, s),
+    ad: ad,
+    disclosure: s.showAds ? AMAZON_DISCLOSURE : ''
+  };
+}
+
+// Spend 1 bonus to continue a lost run with a different question at the same level.
+function useBonus(token) {
+  const s = settings_();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const data = readPlayers_();
+    const i = findTokenRow_(data, token);
+    if (i < 0) throw new Error('Please refresh the page.');
+    const row = data.rows[i];
+    if (row[P.STATUS] !== 'Out' || row[P.REASON] !== 'Wrong answer') throw new Error('Comebacks are for continuing a run that just ended.');
+    if ((Number(row[P.BONUS]) || 0) <= 0) throw new Error('You need a comeback first. When a friend joins with your link and answers 3 questions, you get one.');
+    const used = bonusUsedToday_(row, s);
+    if (used >= s.bonusPerDay) throw new Error('You have used your ' + s.bonusPerDay + ' comebacks for today. They will still be here tomorrow.');
+    comeBack_(row, s);
+    row[P.BONUS] = (Number(row[P.BONUS]) || 0) - 1;
+    row[P.BONUSDATE] = todayKey_(s);
+    row[P.BONUSUSED] = used + 1;
+    const served = serveEndless_(row, s);
+    writePlayer_(data.sh, i, row);
+    return { question: served.q ? publicQuestion_(served.q, (Number(row[P.DAYS]) || 0) + 1, true) : null, player: profile_(row, data, s) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* ---------------- Daily Holdout ---------------- */
+
+function getDaily(token) {
+  const s = settings_();
+  const today = todayKey_(s);
+  const ids = dailyIds_(today);
+  const out = {
+    date: today,
+    label: Utilities.formatDate(new Date(), s.tz, 'MMMM d'),
+    total: ids.length,
+    started: false, done: false, index: 0, score: 0, results: [],
+    question: null,
+    streak: 0,
+    secondsToTomorrow: secondsToReset_(s),
+    yesterday: yesterdayReveal_(s)
+  };
+  if (!token) {
+    const q = question_(ids[0]);
+    if (q) out.question = publicQuestion_(q, 1, false);
+    return out;
+  }
+  const data = readPlayers_();
+  const i = findTokenRow_(data, token);
+  if (i < 0) {
+    const q = question_(ids[0]);
+    if (q) out.question = publicQuestion_(q, 1, false);
+    return out;
+  }
+  const row = data.rows[i];
+  out.streak = dailyStreakNow_(row, s);
+  if (normDate_(row[P.DAILYDATE], s) === today) {
+    out.started = true;
+    out.index = Number(row[P.DAILYIDX]) || 0;
+    out.score = Number(row[P.DAILYSCORE]) || 0;
+    out.done = String(row[P.DAILYDONE]) === 'Yes';
+    out.results = dailyResults_(out.score, out.index, out.done);
+  }
+  if (!out.done) {
+    const q = question_(ids[out.index]);
+    if (q) out.question = publicQuestion_(q, out.index + 1, false);
+  }
+  return out;
+}
+
+function answerDaily(token, choice) {
+  choice = String(choice || '').toUpperCase();
+  if (!/^[ABCD]$/.test(choice)) throw new Error('Pick A, B, C, or D.');
+  const s = settings_();
+  const today = todayKey_(s);
+  const ids = dailyIds_(today);
+  const lock = LockService.getScriptLock();
+  lock.waitLock(15000);
+  try {
+    const data = readPlayers_();
+    const i = findTokenRow_(data, token);
+    if (i < 0) throw new Error('Please refresh the page.');
+    const row = data.rows[i];
+    if (normDate_(row[P.DAILYDATE], s) !== today) {
+      row[P.DAILYDATE] = today; row[P.DAILYIDX] = 0; row[P.DAILYSCORE] = 0; row[P.DAILYDONE] = '';
+    }
+    if (String(row[P.DAILYDONE]) === 'Yes') throw new Error('You already played today\'s Daily. Come back tomorrow!');
+    const idx = Number(row[P.DAILYIDX]) || 0;
+    const q = question_(ids[idx]);
+    if (!q) throw new Error('Today\'s Daily is not ready. Please try again later.');
+    const correct = choice === q.correct;
+    ss_().getSheetByName(TAB.ANSWERS).appendRow(
+      [new Date(), row[P.ID], row[P.NAME], 'Daily ' + today, idx + 1, q.id, choice, correct ? 'Yes' : 'No', '', 'Daily']);
+    bumpCount_('ANS_', s);
+    row[P.TOTALANS] = (Number(row[P.TOTALANS]) || 0) + 1;
+    row[P.SEEN] = addSeen_(row[P.SEEN], q.id);
+    row[P.DAILYIDX] = idx + 1;
+    if (correct) row[P.DAILYSCORE] = (Number(row[P.DAILYSCORE]) || 0) + 1;
+    const finished = !correct || idx + 1 >= ids.length;
+    if (finished) {
+      row[P.DAILYDONE] = 'Yes';
+      const prev = normDate_(row[P.DAILYLASTDATE], s);
+      row[P.DAILYSTREAK] = prev === yesterdayKey_(s) ? (Number(row[P.DAILYSTREAK]) || 0) + 1 : 1;
+      row[P.DAILYLASTDATE] = today;
+      row[P.DAILYBEST] = Math.max(Number(row[P.DAILYBEST]) || 0, Number(row[P.DAILYSCORE]) || 0);
+    }
+    creditReferral_(data, row, s);
+    writePlayer_(data.sh, i, row);
+    formatDateCells_(data.sh, i);
+    const score = Number(row[P.DAILYSCORE]) || 0;
+    let next = null;
+    if (!finished) {
+      const nq = question_(ids[idx + 1]);
+      if (nq) next = publicQuestion_(nq, idx + 2, false);
+    }
+    return {
+      correct: correct, score: score, total: ids.length, done: finished, next: next,
+      results: dailyResults_(score, idx + 1, finished),
+      streak: dailyStreakNow_(row, s),
+      secondsToTomorrow: secondsToReset_(s),
+      player: profile_(row, data, s)
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// The same 10 questions for everyone on a given date. Saved once per day so later edits don't change it.
+function dailyIds_(date) {
+  const props = PropertiesService.getScriptProperties();
+  const key = 'DAILY_' + date;
+  const saved = props.getProperty(key);
+  if (saved) { try { return JSON.parse(saved); } catch (e) {} }
+  let seed = 0;
+  for (let k = 0; k < date.length; k++) seed = (seed * 31 + date.charCodeAt(k)) >>> 0;
+  const rand = () => { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const all = allQuestions_().filter(q => q.active);
+  const used = {};
+  const ids = DAILY_PLAN.map(tier => {
+    let pool = all.filter(q => q.difficulty === tier && !used[q.id]);
+    if (!pool.length) pool = all.filter(q => !used[q.id]);
+    if (!pool.length) return '';
+    const pick = pool[Math.floor(rand() * pool.length)];
+    used[pick.id] = true;
+    return pick.id;
+  }).filter(Boolean);
+  if (ids.length) props.setProperty(key, JSON.stringify(ids));
+  return ids;
+}
+
+function dailyResults_(score, answered, done) {
+  // 'g' = right, 'r' = the miss that ended it, 'n' = not reached
+  const out = [];
+  for (let k = 0; k < DAILY_PLAN.length; k++) {
+    if (k < score) out.push('g');
+    else if (done && k === score && answered > score) out.push('r');
+    else out.push('n');
+  }
+  return out;
+}
+
+function yesterdayReveal_(s) {
+  const y = yesterdayKey_(s);
+  const saved = PropertiesService.getScriptProperties().getProperty('DAILY_' + y);
+  if (!saved) return null;
+  let ids = [];
+  try { ids = JSON.parse(saved); } catch (e) { return null; }
+  return {
+    label: Utilities.formatDate(new Date(Date.now() - DAY_MS), s.tz, 'MMMM d'),
+    questions: ids.map((id, k) => {
+      const q = question_(id);
+      return q ? { number: k + 1, text: q.text, answer: q.correct + '. ' + (q[q.correct] || ''), funFact: q.funFact } : null;
+    }).filter(Boolean)
+  };
+}
+
+function dailyStreakNow_(row, s) {
+  const last = normDate_(row[P.DAILYLASTDATE], s);
+  if (!last) return 0;
+  return (last === todayKey_(s) || last === yesterdayKey_(s)) ? Number(row[P.DAILYSTREAK]) || 0 : 0;
+}
+
+/* ---------------- helpers for runs ---------------- */
+
+function findTokenRow_(data, token) {
+  if (!token) return -1;
+  return data.rows.findIndex(r => r[P.TOKEN] && r[P.TOKEN] === token);
+}
+
+function publicQuestion_(q, number, secondChance) {
+  return { id: q.id, number: number, difficulty: q.difficulty, secondChance: !!secondChance,
+    text: q.text, choices: { A: q.A, B: q.B, C: q.C, D: q.D } };
+}
+
+// Resets a row to a fresh Endless run.
+function startRun_(row, s) {
+  row[P.BEST] = Math.max(Number(row[P.BEST]) || 0, Number(row[P.DAYS]) || 0);
+  row[P.STATUS] = 'Alive';
+  row[P.START] = new Date();
+  row[P.ATTEMPT] = (Number(row[P.ATTEMPT]) || 0) + 1;
+  row[P.DAYS] = 0;
+  row[P.OUTDAY] = '';
+  row[P.REASON] = '';
+  row[P.CURQ] = '';
+  row[P.COMEBACKS] = 0;
+  return true;
+}
+
+// Continues a lost run where it ended, with a different question at the same level.
+function comeBack_(row, s) {
+  const score = Number(row[P.DAYS]) || 0;
+  row[P.STATUS] = 'Alive';
+  row[P.OUTDAY] = '';
+  row[P.REASON] = '';
+  row[P.COMEBACKS] = (Number(row[P.COMEBACKS]) || 0) + 1;
+  const pick = pickQuestion_(endlessTier_(score + 1), seenList_(row[P.SEEN]), [String(row[P.LASTQ] || '')]);
+  row[P.CURQ] = pick ? '!' + pick : '';
+}
+
+// Kept so older admin tools keep working. Missed days no longer matter.
+function checkMissed_(row, now, s) { return false; }
+
+function serveEndless_(row, s) {
+  const cur = String(row[P.CURQ] || '');
+  const n = (Number(row[P.DAYS]) || 0) + 1;
+  let q = null, second = false, changed = false;
+  if (cur) {
+    second = cur.charAt(0) === '!';
+    q = question_(second ? cur.slice(1) : cur);
+    if (q && !q.active) q = null;
+  }
+  if (!q) {
+    const id = pickQuestion_(endlessTier_(n), seenList_(row[P.SEEN]), [String(row[P.LASTQ] || '')]);
+    if (!id) return { q: null, changed: false, secondChance: false };
+    row[P.CURQ] = id;
+    q = question_(id);
+    second = false;
+    changed = true;
+  }
+  const shownKey = q.id + '|' + (Number(row[P.ATTEMPT]) || 1) + '|' + n;
+  if (String(row[P.SHOWNQ]) !== shownKey) {
+    row[P.SHOWNQ] = shownKey;
+    row[P.SHOWNAT] = Date.now();
+    changed = true;
+  }
+  return { q: q, changed: changed, secondChance: second };
+}
+
+// The inviter gets a bonus once the friend has really played (answered a few questions).
+function creditReferral_(data, row, s) {
+  if (!row[P.REFBY] || String(row[P.REFCREDITED]) === 'Yes') return;
+  if ((Number(row[P.TOTALANS]) || 0) < REF_CREDIT_AFTER) return;
+  const ri = data.rows.findIndex(r => r[P.ID] === row[P.REFBY]);
+  row[P.REFCREDITED] = 'Yes';
+  if (ri < 0) return;
+  const refRow = data.rows[ri];
+  refRow[P.BONUS] = (Number(refRow[P.BONUS]) || 0) + 1;
+  refRow[P.FRIENDS] = (Number(refRow[P.FRIENDS]) || 0) + 1;
+  writePlayer_(data.sh, ri, refRow);
+  try {
+    const now = Date.now();
+    const recent = data.rows.filter(r => r[P.REFBY] === refRow[P.ID] && String(r[P.REFCREDITED]) === 'Yes' &&
+      r[P.JOINED] instanceof Date && now - r[P.JOINED].getTime() < DAY_MS).length;
+    if (recent >= CHEAT.BURST_FRIENDS) {
+      alert_('Sign-up burst', String(refRow[P.NAME]),
+        recent + ' people who joined with ' + refRow[P.NAME] + '\'s invite link in the last 24 hours have played. Newest: ' +
+        row[P.NAME] + '. Could be real friends, or extra accounts made to earn comebacks.',
+        'burst|' + refRow[P.ID] + '|' + todayKey_(s));
+    }
+  } catch (err) { Logger.log(err); }
+}
+
+function lightningCheck_(row, q, correct, secs) {
+  if (!(correct && secs !== '' && secs < CHEAT.FAST_SECONDS && /hard/i.test(q.difficulty))) return;
+  row[P.FAST] = (Number(row[P.FAST]) || 0) + 1;
+  if (Number(row[P.FAST]) % CHEAT.FAST_COUNT !== 0) return;
+  try {
+    alert_('Lightning answers', String(row[P.NAME]),
+      row[P.NAME] + ' has answered ' + row[P.FAST] + ' Hard or Very Hard questions correctly in under ' +
+      CHEAT.FAST_SECONDS + ' seconds each. Latest: ' + q.id + ' in ' + secs + ' seconds.',
+      'fast|' + row[P.ID] + '|' + row[P.FAST]);
+  } catch (err) { Logger.log(err); }
+}
+
+function formatDateCells_(sh, i) {
+  [P.LASTDATE, P.TODAYDATE, P.DAILYDATE, P.DAILYLASTDATE, P.BONUSDATE].forEach(c => {
+    sh.getRange(i + 2, c + 1, 1, 1).setNumberFormat('@');
+  });
+}
+
+// Simple daily counters (answers today, new players today) for social proof.
+function bumpCount_(prefix, s) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const k = prefix + todayKey_(s);
+    props.setProperty(k, String((Number(props.getProperty(k)) || 0) + 1));
+  } catch (err) { Logger.log(err); }
+}
+
+function dayCount_(prefix, s) {
+  try { return Number(PropertiesService.getScriptProperties().getProperty(prefix + todayKey_(s))) || 0; } catch (e) { return 0; }
+}
+
+/* ---------------- Open Trivia Database import ---------------- */
+// Questions from opentdb.com are licensed CC BY-SA 4.0. The website shows a credit line for them.
+// Only multiple-choice questions from evergreen categories are kept, and anything that could be
+// tricky, outdated, or argued over is filtered out. Imported questions are marked Source = Open Trivia DB.
+
+const OTDB_CATEGORIES = [9, 10, 12, 17, 20, 22, 23, 25, 27, 28]; // General, Books, Music, Science & Nature, Mythology, Geography, History, Art, Animals, Vehicles
+const OTDB_DIFFICULTY = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+
+function importOpenTrivia_(target) {
+  target = Math.min(Math.max(Number(target) || 300, 50), 1000);
+  const sh = ss_().getSheetByName(TAB.QUESTIONS);
+  QUESTION_CACHE_ = null;
+  const existing = allQuestions_();
+  const seenText = {};
+  existing.forEach(q => { seenText[normText_(q.text)] = true; });
+  let maxId = existing.reduce((m, q) => Math.max(m, Number((q.id.match(/^Q(\d+)$/) || [0, 0])[1])), 0);
+  const tokenRes = JSON.parse(UrlFetchApp.fetch('https://opentdb.com/api_token.php?command=request', { muteHttpExceptions: true }).getContentText() || '{}');
+  const token = tokenRes.token || '';
+  const added = [];
+  let skipped = 0, calls = 0, emptyCats = {};
+  const started = Date.now();
+  while (added.length < target && calls < 40 && Date.now() - started < 4.5 * 60 * 1000) {
+    const live = OTDB_CATEGORIES.filter(c => !emptyCats[c]);
+    if (!live.length) break;
+    const cat = live[calls % live.length];
+    calls++;
+    if (calls > 1) Utilities.sleep(5200); // the site allows one request every 5 seconds
+    let res;
+    try {
+      res = JSON.parse(UrlFetchApp.fetch('https://opentdb.com/api.php?amount=50&type=multiple&encode=url3986&category=' + cat +
+        (token ? '&token=' + token : ''), { muteHttpExceptions: true }).getContentText());
+    } catch (e) { continue; }
+    if (!res || res.response_code === 4 || res.response_code === 1) { emptyCats[cat] = true; continue; }
+    if (res.response_code !== 0) continue;
+    res.results.forEach(item => {
+      if (added.length >= target) return;
+      const d = s => decodeURIComponent(String(s || ''));
+      const text = d(item.question).trim();
+      const right = d(item.correct_answer).trim();
+      const wrong = (item.incorrect_answers || []).map(x => d(x).trim());
+      if (!okImported_(text, right, wrong) || seenText[normText_(text)]) { skipped++; return; }
+      seenText[normText_(text)] = true;
+      const letters = ['A', 'B', 'C', 'D'];
+      const options = wrong.concat([right]);
+      for (let k = options.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); const t = options[k]; options[k] = options[j]; options[j] = t; }
+      const correct = letters[options.indexOf(right)];
+      maxId++;
+      added.push([qid_(maxId), OTDB_DIFFICULTY[item.difficulty] || 'Medium', text,
+        options[0], options[1], options[2], options[3], correct, '', 'Yes', 'Open Trivia DB']);
+    });
+  }
+  if (added.length) {
+    const start = sh.getLastRow() + 1;
+    sh.getRange(start, 1, added.length, 1).setNumberFormat('@');
+    sh.getRange(start, 1, added.length, QUESTION_HEADERS.length).setValues(added);
+  }
+  QUESTION_CACHE_ = null;
+  return added.length + ' questions imported from the Open Trivia Database (' + skipped + ' skipped as tricky, outdated, or duplicates).';
+}
+
+function qid_(n) { return 'Q' + (n < 1000 ? ('00' + n).slice(-3) : String(n)); }
+
+function normText_(t) { return String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); }
+
+// Keeps only questions with one clear, lasting answer.
+function okImported_(text, right, wrong) {
+  if (!text || !right || wrong.length !== 3) return false;
+  if (text.length > 170 || [right].concat(wrong).some(a => !a || a.length > 60)) return false;
+  if (/\b(NOT|EXCEPT|never)\b/.test(text)) return false; // trick wording
+  if (/\b(currently|current|as of|latest|recent|recently|this year|today|still|now|newest|upcoming)\b/i.test(text)) return false;
+  if (/(all|none) of the above|both|neither/i.test([right].concat(wrong).join(' | '))) return false;
+  if (/(anime|manga|video game|pok[eé]mon|minecraft|fortnite|netflix|youtube|twitter|tiktok|instagram)/i.test(text)) return false;
+  if (/\b(19|20)\d\d\b/.test(text) && /\b(best|most|highest|largest|record)\b/i.test(text)) return false; // records that may change
+  const all = [right].concat(wrong).map(a => a.toLowerCase());
+  if (new Set(all).size !== 4) return false;
+  return true;
+}
+
+/* ---------------- one-time upgrade to version 9 ---------------- */
+
+function upgradeToV9_(ss) {
+  const notes = [];
+  const ps = ss.getSheetByName(TAB.PLAYERS);
+  if (ps && ps.getLastRow() > 0 && ps.getLastColumn() < PLAYER_HEADERS.length && String(ps.getRange(1, 1).getValue()) === 'Player ID') {
+    ps.getRange(1, 1, 1, PLAYER_HEADERS.length).setValues([PLAYER_HEADERS]);
+    styleHeader_(ps, PLAYER_HEADERS.length);
+    if (ps.getLastRow() > 1) {
+      const n = ps.getLastRow() - 1;
+      const rows = ps.getRange(2, 1, n, PLAYER_HEADERS.length).getValues();
+      rows.forEach(r => {
+        r[P.BEST] = Math.max(Number(r[P.BEST]) || 0, Number(r[P.DAYS]) || 0);
+        r[P.SAVED] = r[P.HASH] ? 'Yes' : 'No';
+        r[P.TOTALANS] = seenList_(r[P.SEEN]).length;
+        r[P.REFCREDITED] = r[P.REFBY] ? 'Yes' : ''; // already credited under the old rules
+        r[P.STATUS] = 'Ready';
+        r[P.DAYS] = 0;
+        r[P.CURQ] = '';
+        r[P.OUTDAY] = '';
+        if (r[P.REASON] !== 'Removed by admin') r[P.REASON] = '';
+      });
+      ps.getRange(2, 1, n, PLAYER_HEADERS.length).setValues(rows);
+    }
+    notes.push('Players upgraded to Endless. Everyone keeps their best run and starts a fresh Endless run.');
+  }
+  const qs = ss.getSheetByName(TAB.QUESTIONS);
+  if (qs && qs.getLastRow() > 0 && String(qs.getRange(1, 11).getValue()) !== 'Source') {
+    qs.getRange(1, 11).setValue('Source');
+    if (qs.getLastRow() > 1) {
+      const n = qs.getLastRow() - 1;
+      const col = qs.getRange(2, 11, n, 1).getValues().map(r => [r[0] || 'Holdout']);
+      qs.getRange(2, 11, n, 1).setValues(col);
+    }
+  }
+  return notes;
+}
+
+/* =============================================================
  * HOURLY CHECK: counts missed days (pause days) for everyone
  * ============================================================= */
 
@@ -1425,6 +2087,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Bring back players knocked out by a bad question', 'adminReviveDay')
     .addItem('Give a player a bonus question', 'adminGiveBonus')
+    .addItem('Import 300 questions from Open Trivia Database', 'adminImportOpenTrivia')
     .addItem('Run the missed-day check now', 'sweepMissed')
     .addItem('Check for cheating now', 'adminCheckCheating')
     .addItem('Test the Amazon picks', 'adminTestAds')
@@ -1470,6 +2133,11 @@ function reviveByQuestion_(id) {
     lock.releaseLock();
   }
   return count + ' player(s) knocked out by ' + id + ' were brought back.';
+}
+
+function adminImportOpenTrivia() {
+  const ui = SpreadsheetApp.getUi();
+  ui.alert(importOpenTrivia_(300) + '\n\nThey are on the Questions tab with Source = Open Trivia DB. Turn off any you don\'t like.');
 }
 
 function adminGiveBonus() {
